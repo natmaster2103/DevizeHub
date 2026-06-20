@@ -1,5 +1,9 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { createDb } from './db'
+import { runMigrations } from './db/migrate'
+import { seedIfEmpty } from './db/seed'
+import { registerHandlers } from './handlers'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -22,6 +26,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  const dbPath = join(app.getPath('userData'), 'equiphub.db')
+  const { db } = createDb(dbPath)
+  runMigrations(db)
+  seedIfEmpty(db)
+  registerHandlers(ipcMain, db)
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
