@@ -1,0 +1,33 @@
+import { createContext, useContext, useState, type ReactNode } from 'react'
+import { api, unwrap } from '@/lib/api'
+import type { SessionUser, Role, LoginArgs } from '@shared/ipc'
+
+interface AuthCtx {
+  user: SessionUser | null
+  role: Role
+  isAdmin: boolean
+  login(args: LoginArgs): Promise<void>
+  logout(): Promise<void>
+  toggleRole(): void
+}
+const Ctx = createContext<AuthCtx | null>(null)
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<SessionUser | null>(null)
+  const [roleOverride, setRoleOverride] = useState<Role | null>(null)
+  const role: Role = roleOverride ?? user?.role ?? 'staff'
+
+  async function login(args: LoginArgs) {
+    const res = await unwrap(api.auth.login(args))
+    setUser(res.user); setRoleOverride(null)
+  }
+  async function logout() { await api.auth.logout(); setUser(null); setRoleOverride(null) }
+  function toggleRole() { setRoleOverride((r) => (role === 'admin' ? 'staff' : 'admin')) }
+
+  return (
+    <Ctx.Provider value={{ user, role, isAdmin: role === 'admin', login, logout, toggleRole }}>
+      {children}
+    </Ctx.Provider>
+  )
+}
+export function useAuth() { const c = useContext(Ctx); if (!c) throw new Error('useAuth outside provider'); return c }
