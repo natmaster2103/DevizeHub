@@ -1,14 +1,12 @@
-import { resolve } from 'path'
 import { defineConfig } from 'vitest/config'
+import { resolve } from 'path'
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      '@shared': resolve(__dirname, 'electron/shared'),
-      '@': resolve(__dirname, 'src'),
-    },
-  },
+  resolve: { alias: { '@': resolve('src'), '@shared': resolve('electron/shared') } },
   test: {
-    environment: 'node',
-  },
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.test.{ts,tsx}', 'electron/**/*.test.ts']
+  }
 })
