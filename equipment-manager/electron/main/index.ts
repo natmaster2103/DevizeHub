@@ -18,6 +18,10 @@ function createWindow(): void {
     }
   })
   win.on('ready-to-show', () => win.show())
+  win.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+    const tag = ['log', 'warn', 'error', 'debug'][level] ?? 'log'
+    console.log(`[renderer:${tag}] ${message} (${sourceId}:${line})`)
+  })
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {

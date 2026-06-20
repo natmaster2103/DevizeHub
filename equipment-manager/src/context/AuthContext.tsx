@@ -22,10 +22,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user); setRoleOverride(null)
   }
   async function logout() {
-    const res = await api.auth.logout()
-    if (!res.ok) console.error('Logout IPC failed:', res.error)
-    setUser(null)
-    setRoleOverride(null)
+    try {
+      const res = await api.auth.logout()
+      if (!res.ok) console.error('Logout IPC failed:', res.error)
+    } finally {
+      setUser(null)
+      setRoleOverride(null)
+    }
   }
   function toggleRole() { setRoleOverride((r) => (role === 'admin' ? 'staff' : 'admin')) }
 
