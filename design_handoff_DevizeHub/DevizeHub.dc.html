@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:"Segoe UI",-apple-system,system-ui,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:rgba(120,130,150,.35);border-radius:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  @keyframes growBar{from{height:0}to{}}
+</style>
+</helmet>
+<div style="{{ themeVars }}">
+  <div style="min-height:100vh;width:100%;background:var(--bg);color:var(--text)">
+
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--bg) 0%,var(--surface-2) 100%);padding:24px">
+        <div style="width:380px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);box-shadow:0 12px 40px rgba(15,23,42,.12);padding:36px 32px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:26px">
+            <div style="width:60px;height:60px;border-radius:var(--rad-lg);background:var(--primary);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px color-mix(in srgb, var(--primary) 35%, transparent)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:18px;font-weight:700;letter-spacing:-.01em">Quản lý Thiết bị</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:2px">Hệ thống cấp phát nội bộ</div>
+            </div>
+          </div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Tên đăng nhập</label>
+          <input value="admin" style="width:100%;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:14px;margin-bottom:16px;outline:none" style-focus="border-color:var(--primary);background:var(--surface)">
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Mật khẩu</label>
+          <input type="password" value="········" style="width:100%;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:14px;margin-bottom:8px;outline:none" style-focus="border-color:var(--primary);background:var(--surface)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 0 22px">
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-muted);cursor:pointer"><input type="checkbox" checked="checked" style="accent-color:var(--primary)">Ghi nhớ đăng nhập</label>
+            <span style="font-size:13px;color:var(--primary);cursor:pointer">Quên mật khẩu?</span>
+          </div>
+          <button onClick="{{ login }}" style="width:100%;height:42px;border:none;border-radius:var(--rad-sm);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent)" style-hover="background:var(--primary-hover)">Đăng nhập</button>
+          <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:20px">Phiên bản 2.4.1 · Ngoại tuyến</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;min-height:100vh">
+
+        <aside style="{{ sidebarStyle }}">
+          <div style="height:56px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap">
+            <div style="width:32px;height:32px;flex:none;border-radius:var(--rad-sm);background:var(--primary);display:flex;align-items:center;justify-content:center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+            </div>
+            <sc-if value="{{ showLabels }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:14px;font-weight:700;letter-spacing:-.01em">EquipHub</div>
+            </sc-if>
+          </div>
+          <nav style="flex:1;padding:10px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto">
+            <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="8">
+              <div onClick="{{ it.go }}" title="{{ it.label }}" style="{{ it.style }}" style-hover="background:var(--hoverbg)">
+                <span style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center">{{ it.icon }}</span>
+                <sc-if value="{{ showLabels }}" hint-placeholder-val="{{ true }}">
+                  <span style="flex:1;overflow:hidden;text-overflow:ellipsis">{{ it.label }}</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </nav>
+          <div style="padding:10px;border-top:1px solid var(--border)">
+            <div onClick="{{ toggleSidebar }}" style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted);font-size:13px;font-weight:500;white-space:nowrap" style-hover="background:var(--hoverbg)">
+              <span style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center">{{ collapseIcon }}</span>
+              <sc-if value="{{ showLabels }}" hint-placeholder-val="{{ true }}"><span>Thu gọn</span></sc-if>
+            </div>
+          </div>
+        </aside><div style="flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg)">
+          <header style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0">
+              <h1 style="font-size:17px;font-weight:700;margin:0;letter-spacing:-.01em;white-space:nowrap">{{ pageTitle }}</h1>
+              <span style="font-size:13px;color:var(--text-muted);white-space:nowrap">{{ pageSub }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div onClick="{{ toggleRole }}" title="Chuyển vai trò (demo)" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;font-size:12px;font-weight:600;color:var(--text-muted);white-space:nowrap" style-hover="background:var(--hoverbg)">
+                <span style="width:7px;height:7px;border-radius:50%;background:{{ roleDot }}"></span>{{ roleLabel }}
+              </div>
+              <div onClick="{{ toggleTheme }}" title="Đổi giao diện" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="background:var(--hoverbg)">
+                <span>{{ themeIcon }}</span>
+              </div>
+              <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted);position:relative" style-hover="background:var(--hoverbg)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+                <span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#dc2626;border:1.5px solid var(--surface)"></span>
+              </div>
+              <div style="width:1px;height:24px;background:var(--border);margin:0 2px"></div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">{{ userInitials }}</div>
+                <div style="line-height:1.2;white-space:nowrap">
+                  <div style="font-size:13px;font-weight:600">{{ userName }}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">{{ roleLabel }}</div>
+                </div>
+              </div>
+              <div onClick="{{ logout }}" title="Đăng xuất" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted);margin-left:2px" style-hover="background:var(--hoverbg);color:#dc2626">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              </div>
+            </div>
+          </header>
+
+          <main style="flex:1;overflow-y:auto;padding:24px">
+
+            <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+              <div style="max-width:1240px;margin:0 auto">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
+                  <sc-for list="{{ statCards }}" as="c" hint-placeholder-count="4">
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px 18px 16px">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+                        <div>
+                          <div style="font-size:13px;color:var(--text-muted);font-weight:500">{{ c.label }}</div>
+                          <div style="font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:6px;line-height:1">{{ c.value }}</div>
+                        </div>
+                        <div style="width:42px;height:42px;border-radius:var(--rad-md);display:flex;align-items:center;justify-content:center;background:{{ c.tint }};color:{{ c.color }}">{{ c.icon }}</div>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;color:var(--text-muted)">
+                        <span style="color:{{ c.color }};font-weight:600">{{ c.delta }}</span>{{ c.deltaLabel }}
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ showDeptGrid }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 14px">
+                    <div>
+                      <div style="font-size:15px;font-weight:700">Thiết bị đang trang bị theo phòng ban</div>
+                      <div style="font-size:12px;color:var(--text-muted);margin-top:2px">{{ deptAllocTotal }} thiết bị đang được cấp phát · top 4 phòng ban</div>
+                    </div>
+                    <div onClick="{{ goDevices }}" style="font-size:13px;font-weight:600;color:var(--primary);cursor:pointer">Xem tất cả ›</div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
+                    <sc-for list="{{ deptCards }}" as="g" hint-placeholder-count="4">
+                      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px;display:flex;flex-direction:column;gap:14px" style-hover="border-color:var(--primary)">
+                        <div style="display:flex;align-items:center;gap:12px">
+                          <div style="width:40px;height:40px;flex:none;border-radius:var(--rad-md);background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center">{{ iconDept }}</div>
+                          <div style="flex:1;min-width:0">
+                            <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.dept }}</div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-top:1px">{{ g.share }}% tổng cấp phát</div>
+                          </div>
+                          <div style="font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1">{{ g.count }}</div>
+                        </div>
+                        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">Phiếu đề nghị</div>
+                        <div style="display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding-bottom:2px">
+                          <sc-for list="{{ g.chips }}" as="c" hint-placeholder-count="2">
+                            <div onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.code }}</div>
+                          </sc-for>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-muted)">
+                          <span>{{ g.reqMeta }} · {{ g.reqItemCount }}</span>
+                          <sc-if value="{{ g.isActiveReq }}" hint-placeholder-val="{{ true }}">
+                            <span style="{{ g.reqBadge }}">{{ g.reqStatus }}</span>
+                          </sc-if>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="2">
+                            <div style="display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:var(--rad-sm);background:var(--surface-2);border:1px solid var(--border)">
+                              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                                  <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ it.name }}</span>
+                                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex:none;font-family:'Consolas',monospace">{{ it.datetime }}</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:14px;font-size:12px">
+                                  <span style="color:var(--text-muted)">Mượn: <span style="color:var(--text);font-weight:600">{{ it.borrower }}</span></span>
+                                  <span style="color:var(--text-muted)">Cấp: <span style="color:var(--text);font-weight:600">{{ it.lender }}</span></span>
+                                </div>
+                              </div>
+                              <sc-if value="{{ it.returnable }}" hint-placeholder-val="{{ true }}">
+                                <button onClick="{{ it.ret }}" style="flex:none;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconReturn }}<span>Trả về</span></button>
+                              </sc-if>
+                            </div>
+                          </sc-for>
+                          <sc-if value="{{ g.hasPager }}" hint-placeholder-val="{{ false }}">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px">
+                              <span style="font-size:12px;color:var(--text-muted)">{{ g.pageInfo }}</span>
+                              <div style="display:flex;align-items:center;gap:5px">
+                                <div onClick="{{ g.prevPage }}" style="{{ g.prevStyle }}">‹</div>
+                                <sc-for list="{{ g.pages }}" as="p" hint-placeholder-count="2">
+                                  <div onClick="{{ p.onClick }}" style="{{ p.style }}">{{ p.n }}</div>
+                                </sc-for>
+                                <div onClick="{{ g.nextPage }}" style="{{ g.nextStyle }}">›</div>
+                              </div>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isDevices }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:1240px;margin:0 auto">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+                  <div style="position:relative;flex:1;min-width:260px">
+                    <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex">{{ iconSearch }}</span>
+                    <input value="{{ deviceQuery }}" onInput="{{ onSearch }}" placeholder="Tìm theo SKU, tên, serial, người giữ — hoặc quét mã vạch…" style="width:100%;height:40px;padding:0 40px 0 36px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;outline:none" style-focus="border-color:var(--primary)">
+                    <span style="position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex" title="Quét mã vạch">{{ iconScan }}</span>
+                  </div>
+                  <button style="display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">{{ iconPlus }}<span>Thêm thiết bị</span></button>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+                  <sc-for list="{{ filterChips }}" as="ch" hint-placeholder-count="6">
+                    <div onClick="{{ ch.onClick }}" style="{{ ch.style }}">{{ ch.label }}<span style="font-size:11px;opacity:.75">{{ ch.count }}</span></div>
+                  </sc-for>
+                </div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden">
+                  <div style="display:grid;grid-template-columns:120px 1.6fr 1.1fr 150px 1.2fr 130px;gap:0;padding:0 18px;height:44px;align-items:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">
+                    <div>SKU</div><div>Tên thiết bị</div><div>Loại</div><div>Trạng thái</div><div>Phòng / Người giữ</div><div style="text-align:right">Thao tác</div>
+                  </div>
+                  <sc-for list="{{ filteredDevices }}" as="d" hint-placeholder-count="8">
+                    <div style="display:grid;grid-template-columns:120px 1.6fr 1.1fr 150px 1.2fr 130px;gap:0;padding:0 18px;min-height:var(--rh);align-items:center;border-bottom:1px solid var(--border);font-size:var(--tfs)" style-hover="background:var(--hoverbg)">
+                      <div style="font-family:'Consolas','SF Mono',monospace;font-weight:600;font-size:13px">{{ d.sku }}</div>
+                      <div style="font-weight:600">{{ d.name }}</div>
+                      <div style="color:var(--text-muted)">{{ d.cat }}</div>
+                      <div><span style="{{ d.badge }}">{{ d.status }}</span></div>
+                      <div style="color:var(--text-muted);line-height:1.3"><div style="color:var(--text);font-weight:500">{{ d.dept }}</div><div style="font-size:12px">{{ d.holderText }}</div></div>
+                      <div style="display:flex;gap:5px;justify-content:flex-end">
+                        <div onClick="{{ d.view }}" title="Xem" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconView }}</div>
+                        <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+                          <div title="Sửa" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconEdit }}</div>
+                          <div title="Đổi trạng thái" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconSwap }}</div>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </sc-for>
+                  <div style="padding:12px 18px;font-size:13px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center">
+                    <span>Hiển thị {{ deviceCount }} / {{ totalCount }} thiết bị</span>
+                    <div style="display:flex;gap:6px">
+                      <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer">‹</div>
+                      <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--primary);background:var(--primary-soft);color:var(--primary);border-radius:var(--rad-sm);font-weight:600">1</div>
+                      <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer">›</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isDeviceDetail }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:1000px;margin:0 auto">
+                <div onClick="{{ goDevices }}" style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;margin-bottom:16px" style-hover="color:var(--primary)">{{ iconBack }}<span>Quay lại danh sách</span></div>
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px">
+                  <div style="display:flex;gap:16px;align-items:center">
+                    <div style="width:56px;height:56px;border-radius:13px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center">{{ devBig }}</div>
+                    <div>
+                      <div style="font-size:22px;font-weight:700;letter-spacing:-.01em">{{ dev.name }}</div>
+                      <div style="display:flex;align-items:center;gap:10px;margin-top:5px"><span style="font-family:'Consolas',monospace;font-size:13px;color:var(--text-muted)">{{ dev.sku }}</span><span style="{{ devBadge }}">{{ dev.status }}</span></div>
+                    </div>
+                  </div>
+                  <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;gap:8px">
+                      <button style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconSwap }}<span>Đổi trạng thái</span></button>
+                      <button style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">{{ iconEdit }}<span>Chỉnh sửa</span></button>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;gap:22px;border-bottom:1px solid var(--border);margin-bottom:20px">
+                  <div onClick="{{ setInfoTab }}" style="{{ tabInfoStyle }}">Thông tin</div>
+                  <div onClick="{{ setHistTab }}" style="{{ tabHistStyle }}">Lịch sử</div>
+                </div>
+                <sc-if value="{{ isInfoTab }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:8px 24px">
+                    <sc-for list="{{ devInfo }}" as="f" hint-placeholder-count="8">
+                      <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;padding:14px 0;border-bottom:1px solid var(--border);align-items:center">
+                        <div style="font-size:13px;color:var(--text-muted);font-weight:500">{{ f.k }}</div>
+                        <div style="font-size:14px;font-weight:500"><span style="{{ f.badge }}">{{ f.v }}</span></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ isHistTab }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:24px 24px 8px">
+                    <sc-for list="{{ hist }}" as="h" hint-placeholder-count="5">
+                      <div style="display:flex;gap:14px;padding-bottom:20px;position:relative">
+                        <div style="display:flex;flex-direction:column;align-items:center">
+                          <div style="width:34px;height:34px;flex:none;border-radius:var(--rad-md);display:flex;align-items:center;justify-content:center;background:{{ h.tint }};color:{{ h.color }};z-index:1">{{ h.icon }}</div>
+                          <div style="flex:1;width:2px;background:var(--border);margin-top:4px"></div>
+                        </div>
+                        <div style="padding-top:4px">
+                          <div style="font-size:14px;font-weight:600;line-height:1.35">{{ h.title }}</div>
+                          <div style="font-size:13px;color:var(--text-muted);margin-top:2px">{{ h.sub }}</div>
+                          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">{{ h.date }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isRequests }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:1240px;margin:0 auto">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px">
+                  <div style="position:relative;flex:1;max-width:340px">
+                    <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex">{{ iconSearch }}</span>
+                    <input placeholder="Tìm phiếu, phòng ban, người đề nghị…" style="width:100%;height:40px;padding:0 12px 0 36px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;outline:none" style-focus="border-color:var(--primary)">
+                  </div>
+                  <button style="display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">{{ iconPlus }}<span>Tạo phiếu đề nghị</span></button>
+                </div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden">
+                  <div style="display:grid;grid-template-columns:120px 1.4fr 1.3fr 130px 90px 150px 70px;padding:0 18px;height:44px;align-items:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">
+                    <div>Mã phiếu</div><div>Phòng ban</div><div>Người đề nghị</div><div>Ngày lập</div><div>SL</div><div>Trạng thái</div><div></div>
+                  </div>
+                  <sc-for list="{{ reqList }}" as="r" hint-placeholder-count="6">
+                    <div onClick="{{ r.view }}" style="display:grid;grid-template-columns:120px 1.4fr 1.3fr 130px 90px 150px 70px;padding:0 18px;min-height:var(--rh);align-items:center;border-bottom:1px solid var(--border);font-size:var(--tfs);cursor:pointer" style-hover="background:var(--hoverbg)">
+                      <div style="font-family:'Consolas',monospace;font-weight:700;color:var(--primary)">{{ r.code }}</div>
+                      <div style="font-weight:600">{{ r.dept }}</div>
+                      <div style="color:var(--text-muted)">{{ r.requester }}</div>
+                      <div style="color:var(--text-muted)">{{ r.date }}</div>
+                      <div style="color:var(--text-muted)">{{ r.count }}</div>
+                      <div><span style="{{ r.badge }}">{{ r.status }}</span></div>
+                      <div style="display:flex;justify-content:flex-end;color:var(--text-muted)">›</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isRequestDetail }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:1100px;margin:0 auto">
+                <div onClick="{{ goRequests }}" style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;margin-bottom:16px" style-hover="color:var(--primary)">{{ iconBack }}<span>Quay lại danh sách phiếu</span></div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:22px;margin-bottom:16px">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <span style="font-family:'Consolas',monospace;font-size:22px;font-weight:700;color:var(--primary)">{{ req.code }}</span>
+                      <span style="{{ reqBadge }}">{{ req.status }}</span>
+                    </div>
+                    <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ openAddDevice }}" style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:1px dashed var(--primary);border-radius:var(--rad-md);background:var(--primary-soft2);color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">{{ iconPlus }}<span>Thêm thiết bị</span></button>
+                    </sc-if>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+                    <sc-for list="{{ reqMeta }}" as="m" hint-placeholder-count="4">
+                      <div><div style="font-size:12px;color:var(--text-muted);font-weight:500">{{ m.k }}</div><div style="font-size:14px;font-weight:600;margin-top:3px">{{ m.v }}</div></div>
+                    </sc-for>
+                  </div>
+                  <div style="padding-top:16px"><div style="font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:4px">Ghi chú</div><div style="font-size:14px">{{ reqNote }}</div></div>
+                </div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden">
+                  <div style="padding:14px 18px;font-size:14px;font-weight:700;border-bottom:1px solid var(--border)">Thiết bị trên phiếu</div>
+                  <div style="display:grid;grid-template-columns:120px 1.6fr 1.1fr 150px 120px;padding:0 18px;height:42px;align-items:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">
+                    <div>SKU</div><div>Tên thiết bị</div><div>Loại</div><div>Người nhận</div><div style="text-align:right">Thao tác</div>
+                  </div>
+                  <sc-for list="{{ reqDevices }}" as="d" hint-placeholder-count="3">
+                    <div style="display:grid;grid-template-columns:120px 1.6fr 1.1fr 150px 120px;padding:0 18px;min-height:var(--rh);align-items:center;border-bottom:1px solid var(--border);font-size:var(--tfs)">
+                      <div style="font-family:'Consolas',monospace;font-weight:600;font-size:13px">{{ d.sku }}</div>
+                      <div style="font-weight:600">{{ d.name }}</div>
+                      <div style="color:var(--text-muted)">{{ d.cat }}</div>
+                      <div style="color:var(--text-muted)">{{ d.holder }}</div>
+                      <div style="display:flex;justify-content:flex-end">
+                        <sc-if value="{{ d.returnable }}" hint-placeholder-val="{{ true }}">
+                          <button onClick="{{ d.ret }}" style="display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconReturn }}<span>Trả về</span></button>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isAllocate }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:720px;margin:0 auto">
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:26px">
+                  <div style="font-size:16px;font-weight:700;margin-bottom:4px">Phiếu cấp phát lẻ</div>
+                  <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px">Bàn giao nhanh một thiết bị cho nhân viên, không qua phiếu đề nghị.</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+                    <div style="grid-column:1 / -1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Thiết bị <span style="color:#dc2626">*</span></label>
+                      <select style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;cursor:pointer">
+                        <option>— Chọn thiết bị còn trong kho —</option>
+                        <sc-for list="{{ availOptions }}" as="o" hint-placeholder-count="4"><option>{{ o }}</option></sc-for>
+                      </select>
+                      <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Chỉ hiển thị thiết bị có trạng thái “Trong kho”.</div>
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Nhân viên nhận <span style="color:#dc2626">*</span></label>
+                      <select style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;cursor:pointer">
+                        <sc-for list="{{ empOptions }}" as="o" hint-placeholder-count="6"><option>{{ o }}</option></sc-for>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Phòng ban <span style="color:#dc2626">*</span></label>
+                      <select style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;cursor:pointer">
+                        <sc-for list="{{ deptOptions }}" as="o" hint-placeholder-count="6"><option>{{ o }}</option></sc-for>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Ngày hẹn trả</label>
+                      <input type="date" value="2026-09-19" style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Liên kết phiếu đề nghị</label>
+                      <select style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;cursor:pointer">
+                        <sc-for list="{{ reqOptions }}" as="o" hint-placeholder-count="3"><option>{{ o }}</option></sc-for>
+                      </select>
+                    </div>
+                    <div style="grid-column:1 / -1">
+                      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Tình trạng / ghi chú bàn giao</label>
+                      <textarea placeholder="VD: Máy mới, kèm sạc và túi chống sốc…" style="width:100%;height:84px;padding:11px 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit"></textarea>
+                    </div>
+                  </div>
+                  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+                    <button style="height:42px;padding:0 18px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Hủy</button>
+                    <button style="height:42px;padding:0 20px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">Xác nhận cấp phát</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isReports }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:1100px;margin:0 auto">
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px;margin-bottom:16px">
+                  <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap">
+                    <div>
+                      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px">Từ ngày</label>
+                      <input type="date" value="2026-01-01" style="height:38px;padding:0 10px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:13px;outline:none">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px">Đến ngày</label>
+                      <input type="date" value="2026-06-19" style="height:38px;padding:0 10px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:13px;outline:none">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px">Phòng ban</label>
+                      <select style="height:38px;padding:0 10px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:13px;outline:none;cursor:pointer"><option>Tất cả phòng ban</option><sc-for list="{{ deptOptions }}" as="o" hint-placeholder-count="6"><option>{{ o }}</option></sc-for></select>
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px">Loại thiết bị</label>
+                      <select style="height:38px;padding:0 10px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:13px;outline:none;cursor:pointer"><option>Tất cả loại</option></select>
+                    </div>
+                    <div style="flex:1"></div>
+                    <button style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:1px solid #16a34a;border-radius:var(--rad-sm);background:rgba(22,163,74,.08);color:#16a34a;font-size:13px;font-weight:600;cursor:pointer">{{ iconExcel }}<span>Xuất Excel</span></button>
+                    <button style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:1px solid #dc2626;border-radius:var(--rad-sm);background:rgba(220,38,38,.07);color:#dc2626;font-size:13px;font-weight:600;cursor:pointer">{{ iconPdf }}<span>Xuất PDF</span></button>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px"><div style="font-size:13px;color:var(--text-muted)">Tổng thiết bị thống kê</div><div style="font-size:28px;font-weight:700;margin-top:4px">{{ repTotal }}</div></div>
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px"><div style="font-size:13px;color:var(--text-muted)">Đang cấp phát</div><div style="font-size:28px;font-weight:700;margin-top:4px;color:var(--primary)">{{ repCap }}</div></div>
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px"><div style="font-size:13px;color:var(--text-muted)">Tỷ lệ sử dụng</div><div style="font-size:28px;font-weight:700;margin-top:4px;color:#16a34a">{{ repRate }}</div></div>
+                </div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden">
+                  <div style="padding:14px 18px;font-size:14px;font-weight:700;border-bottom:1px solid var(--border)">Thống kê theo loại thiết bị</div>
+                  <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;padding:0 18px;height:42px;align-items:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">
+                    <div>Loại thiết bị</div><div style="text-align:right">Tổng</div><div style="text-align:right">Đang cấp</div><div style="text-align:right">Trong kho</div><div style="text-align:right">Tỷ lệ</div>
+                  </div>
+                  <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="7">
+                    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;padding:0 18px;height:var(--rh);align-items:center;border-bottom:1px solid var(--border);font-size:var(--tfs)">
+                      <div style="font-weight:600">{{ r.cat }}</div>
+                      <div style="text-align:right">{{ r.total }}</div>
+                      <div style="text-align:right;color:var(--primary);font-weight:600">{{ r.cap }}</div>
+                      <div style="text-align:right;color:var(--text-muted)">{{ r.inv }}</div>
+                      <div style="text-align:right;font-weight:600">{{ r.rate }}</div>
+                    </div>
+                  </sc-for>
+                  <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;padding:0 18px;height:var(--rh);align-items:center;font-size:var(--tfs);font-weight:700;background:var(--surface-2)">
+                    <div>Tổng cộng</div><div style="text-align:right">{{ repTotal }}</div><div style="text-align:right;color:var(--primary)">{{ repCap }}</div><div style="text-align:right">—</div><div style="text-align:right">{{ repRate }}</div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isCatalog }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:900px;margin:0 auto">
+                <div style="display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;margin-bottom:18px">
+                  <div onClick="{{ setCatCat }}" style="{{ catTabCatStyle }}">Loại thiết bị</div>
+                  <div onClick="{{ setCatDept }}" style="{{ catTabDeptStyle }}">Phòng ban</div>
+                  <div onClick="{{ setCatEmp }}" style="{{ catTabEmpStyle }}">Nhân viên</div>
+                </div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden">
+                  <div style="display:grid;grid-template-columns:140px 1.6fr 1fr 120px;padding:0 18px;height:44px;align-items:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">
+                    <div>{{ catCols.0 }}</div><div>{{ catCols.1 }}</div><div>{{ catCols.2 }}</div><div style="text-align:right">Thao tác</div>
+                  </div>
+                  <sc-for list="{{ catRows }}" as="r" hint-placeholder-count="7">
+                    <div style="display:grid;grid-template-columns:140px 1.6fr 1fr 120px;padding:0 18px;height:var(--rh);align-items:center;border-bottom:1px solid var(--border);font-size:var(--tfs)" style-hover="background:var(--hoverbg)">
+                      <div style="font-family:'Consolas',monospace;font-weight:600;font-size:13px">{{ r.c0 }}</div>
+                      <div style="font-weight:600">{{ r.c1 }}</div>
+                      <div style="color:var(--text-muted)">{{ r.c2 }}</div>
+                      <div style="display:flex;gap:5px;justify-content:flex-end">
+                        <div title="Sửa" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconEdit }}</div>
+                        <div title="Xóa" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="border-color:#dc2626;color:#dc2626">{{ iconTrash }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                  <div style="display:grid;grid-template-columns:140px 1.6fr 1fr 120px;padding:9px 18px;gap:10px;align-items:center;background:var(--surface-2)">
+                    <input placeholder="Mã" style="height:36px;padding:0 10px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none">
+                    <input placeholder="Tên mới…" style="height:36px;padding:0 10px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none">
+                    <div></div>
+                    <button style="display:inline-flex;align-items:center;justify-content:center;gap:5px;height:36px;border:none;border-radius:var(--rad-sm);background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer">{{ iconPlus }}<span>Thêm</span></button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+                <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)">
+                      <div><div style="font-size:15px;font-weight:700">Quản lý người dùng</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">Chỉ quản trị viên có quyền truy cập</div></div>
+                      <button style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer">{{ iconPlus }}<span>Thêm người dùng</span></button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1.4fr 1.2fr 1fr 110px 90px;padding:0 18px;height:42px;align-items:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">
+                      <div>Họ tên</div><div>Tài khoản</div><div>Vai trò</div><div>Trạng thái</div><div style="text-align:right">Sửa</div>
+                    </div>
+                    <sc-for list="{{ users }}" as="u" hint-placeholder-count="4">
+                      <div style="display:grid;grid-template-columns:1.4fr 1.2fr 1fr 110px 90px;padding:0 18px;height:var(--rh);align-items:center;border-bottom:1px solid var(--border);font-size:var(--tfs)">
+                        <div style="font-weight:600">{{ u.name }}</div>
+                        <div style="font-family:'Consolas',monospace;color:var(--text-muted)">{{ u.user }}</div>
+                        <div style="color:var(--text-muted)">{{ u.role }}</div>
+                        <div>
+                          <sc-if value="{{ u.active }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#16a34a"><span style="width:7px;height:7px;border-radius:50%;background:#16a34a"></span>Hoạt động</span></sc-if>
+                          <sc-if value="{{ u.inactive }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--text-muted)"><span style="width:7px;height:7px;border-radius:50%;background:#94a3b8"></span>Đã khóa</span></sc-if>
+                        </div>
+                        <div style="display:flex;justify-content:flex-end"><div title="Sửa" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconEdit }}</div></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:20px">
+                    <div style="font-size:15px;font-weight:700;margin-bottom:16px">Đổi mật khẩu</div>
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Mật khẩu hiện tại</label>
+                    <input type="password" value="········" style="width:100%;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:14px;margin-bottom:14px;outline:none">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Mật khẩu mới</label>
+                    <input type="password" style="width:100%;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:14px;margin-bottom:14px;outline:none">
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Xác nhận mật khẩu mới</label>
+                    <input type="password" style="width:100%;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text);font-size:14px;margin-bottom:18px;outline:none">
+                    <button style="height:40px;padding:0 18px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">Cập nhật mật khẩu</button>
+                  </div>
+                  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:20px">
+                    <div style="font-size:15px;font-weight:700;margin-bottom:16px">Cơ sở dữ liệu</div>
+                    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Đường dẫn tệp dữ liệu</label>
+                    <div style="display:flex;gap:8px;margin-bottom:18px">
+                      <input value="{{ dbPath }}" readonly="readonly" style="flex:1;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface-2);color:var(--text-muted);font-size:13px;font-family:'Consolas',monospace;outline:none">
+                      <button title="Sao chép đường dẫn" style="display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border:1px solid var(--border);border-radius:var(--rad-sm);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer" style-hover="border-color:var(--primary);color:var(--primary)">{{ iconCopy }}<span>Sao chép</span></button>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                      <div style="display:flex;justify-content:space-between;font-size:13px;padding:9px 0;border-top:1px solid var(--border)"><span style="color:var(--text-muted)">Dung lượng</span><span style="font-weight:600">48.2 MB</span></div>
+                      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Sao lưu gần nhất</span><span style="font-weight:600">19/06/2026 08:14</span></div>
+                      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Chế độ</span><span style="font-weight:600;color:#16a34a">Ngoại tuyến</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+          </main>
+        </div>
+
+        
+      </div>
+
+      <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px" onClick="{{ closeModal }}">
+          <sc-if value="{{ isReturnModal }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ stopProp }}" style="width:440px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);box-shadow:0 24px 60px rgba(0,0,0,.3);overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)">
+              <div style="font-size:16px;font-weight:700">Trả thiết bị về kho</div>
+              <div onClick="{{ closeModal }}" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="background:var(--hoverbg)">{{ iconClose }}</div>
+            </div>
+            <div style="padding:22px">
+              <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:18px">
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:var(--text-muted)">Thiết bị</span><span style="font-weight:600">{{ modalDevice.name }}</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:var(--text-muted)">SKU</span><span style="font-family:'Consolas',monospace;font-weight:600">{{ modalDevice.sku }}</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:var(--text-muted)">Người đang giữ</span><span style="font-weight:600">{{ modalDevice.holder }}</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Phiếu liên kết</span><span style="font-family:'Consolas',monospace;font-weight:600;color:var(--primary)">{{ modalReqCode }}</span></div>
+              </div>
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Tình trạng khi trả <span style="color:#dc2626">*</span></label>
+              <select style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;cursor:pointer;margin-bottom:16px"><option>Tốt — hoạt động bình thường</option><option>Trầy xước nhẹ</option><option>Cần bảo trì</option><option>Hỏng</option></select>
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Ghi chú</label>
+              <textarea placeholder="Ghi chú thêm về tình trạng thiết bị…" style="width:100%;height:74px;padding:11px 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit"></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border)">
+              <button onClick="{{ closeModal }}" style="height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Hủy</button>
+              <button onClick="{{ closeModal }}" style="height:40px;padding:0 18px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">Xác nhận trả về</button>
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ isAddModal }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="width:560px;max-height:80vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);box-shadow:0 24px 60px rgba(0,0,0,.3);overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)">
+              <div>
+                <div style="font-size:16px;font-weight:700">Thêm thiết bị vào phiếu</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Phiếu {{ modalReqCode }} · {{ availCount }} thiết bị sẵn có trong kho</div>
+              </div>
+              <div onClick="{{ closeModal }}" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="background:var(--hoverbg)">{{ iconClose }}</div>
+            </div>
+            <div style="padding:16px 22px;border-bottom:1px solid var(--border)">
+              <div style="position:relative">
+                <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex">{{ iconSearch }}</span>
+                <input placeholder="Tìm thiết bị còn trong kho…" style="width:100%;height:40px;padding:0 12px 0 36px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none" style-focus="border-color:var(--primary)" />
+              </div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:10px 14px">
+              <sc-for list="{{ availDevices }}" as="d" hint-placeholder-count="4">
+                <label style="display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:var(--rad-sm);cursor:pointer" style-hover="background:var(--hoverbg)">
+                  <input type="checkbox" style="width:17px;height:17px;accent-color:var(--primary);flex:none" />
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</div>
+                    <div style="font-size:12px;color:var(--text-muted)"><span style="font-family:'Consolas',monospace">{{ d.sku }}</span> · {{ d.cat }}</div>
+                  </div>
+                  <span style="font-size:11px;font-weight:600;color:#16a34a;background:rgba(22,163,74,.12);padding:2px 9px;border-radius:999px;flex:none">Trong kho</span>
+                </label>
+              </sc-for>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border)">
+              <button onClick="{{ closeModal }}" style="height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Hủy</button>
+              <button onClick="{{ closeModal }}" style="display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 18px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">{{ iconPlus }}<span>Thêm vào phiếu</span></button>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:900},&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Xanh dương&quot;,&quot;Xanh mòng két&quot;,&quot;Tím hoàng hôn&quot;,&quot;Lục rừng&quot;],&quot;default&quot;:&quot;Xanh dương&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Thoáng&quot;,&quot;Tiêu chuẩn&quot;,&quot;Gọn&quot;],&quot;default&quot;:&quot;Tiêu chuẩn&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;chrome&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Mềm mại&quot;,&quot;Tiêu chuẩn&quot;,&quot;Sắc nét&quot;],&quot;default&quot;:&quot;Tiêu chuẩn&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;groupByDept&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { screen: 'dashboard', loggedIn: false, collapsed: false, dark: false, role: 'admin', hoverBar: -1, deviceQuery: '', deviceFilter: 'all', selectedDevice: 'LAP-0012', selectedRequest: 'DX-301', detailTab: 'history', catalogTab: 'cat', modal: null, deptTab: {}, deptPage: {} };
+
+  setDeptTab(dept, tab){ this.setState(s=>({ deptTab: {...s.deptTab, [dept]: tab}, deptPage: {...s.deptPage, [dept]: 1} })); }
+  setDeptPage(dept, p){ this.setState(s=>({ deptPage: {...s.deptPage, [dept]: p} })); }
+
+  ICON = {
+    dashboard:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>',
+    devices:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+    requests:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',
+    allocate:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v-3a4 4 0 0 0-4-4H4"/><polyline points="9 4 4 9 9 14"/><circle cx="18" cy="18" r="3"/></svg>',
+    reports:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    catalog:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2"/><circle cx="3.5" cy="12" r="1.2"/><circle cx="3.5" cy="18" r="1.2"/></svg>',
+    settings:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    box:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+    check:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    wrench:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+    alert:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    clock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    down:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><polyline points="6 14 12 20 18 14"/></svg>',
+  };
+
+  STATUS = {
+    'Trong kho':{bg:'rgba(22,163,74,.14)',fg:'#16a34a'},
+    'Đang trang bị':{bg:'rgba(37,99,235,.14)',fg:'#2563eb'},
+    'Đang cấp phát':{bg:'rgba(37,99,235,.14)',fg:'#2563eb'},
+    'Đang bảo trì':{bg:'rgba(202,138,4,.18)',fg:'#ca8a04'},
+    'Hỏng':{bg:'rgba(220,38,38,.14)',fg:'#dc2626'},
+    'Thanh lý':{bg:'rgba(100,116,139,.18)',fg:'#64748b'},
+    'Hoàn tất':{bg:'rgba(22,163,74,.14)',fg:'#16a34a'},
+    'Đang xử lý':{bg:'rgba(202,138,4,.18)',fg:'#ca8a04'},
+  };
+
+  devices = [
+    {sku:'LAP-0012',name:'Dell Latitude 5440',cat:'Máy tính xách tay',status:'Đang trang bị',dept:'Phòng Kế toán',serial:'DL5440-VN-88213',holder:'Nguyễn Văn An',notes:'Bàn giao kèm túi chống sốc và sạc 65W.'},
+    {sku:'LAP-0018',name:'ThinkPad T14 Gen 4',cat:'Máy tính xách tay',status:'Trong kho',dept:'—',serial:'TP-T14-44190',holder:'—',notes:'Máy mới, còn nguyên seal.'},
+    {sku:'MON-0034',name:'Dell P2422H 24"',cat:'Màn hình',status:'Đang trang bị',dept:'Phòng Kỹ thuật',serial:'DELLP24-77321',holder:'Lê Hoàng Cường',notes:''},
+    {sku:'MON-0041',name:'LG 27UP650 27"',cat:'Màn hình',status:'Đang bảo trì',dept:'Phòng IT',serial:'LG27UP-90122',holder:'—',notes:'Điểm chết góc trên phải, đang đổi bảo hành.'},
+    {sku:'PRN-0007',name:'HP LaserJet Pro M404',cat:'Máy in',status:'Đang trang bị',dept:'Phòng Hành chính',serial:'HPM404-31002',holder:'Phạm Thị Dung',notes:''},
+    {sku:'PHN-0021',name:'iPhone 13 128GB',cat:'Điện thoại',status:'Đang trang bị',dept:'Phòng Kinh doanh',serial:'IP13-VN-55810',holder:'Vũ Minh Đức',notes:'Lắp SIM công ty 0987xxxxxx.'},
+    {sku:'PHN-0025',name:'Samsung Galaxy A54',cat:'Điện thoại',status:'Hỏng',dept:'—',serial:'SGA54-66230',holder:'—',notes:'Vỡ màn hình, chờ thanh lý.'},
+    {sku:'PRJ-0003',name:'Epson EB-X06',cat:'Máy chiếu',status:'Trong kho',dept:'—',serial:'EPX06-12003',holder:'—',notes:''},
+    {sku:'PC-0009',name:'HP ProDesk 400 G9',cat:'Máy tính để bàn',status:'Đang trang bị',dept:'Phòng Nhân sự',serial:'HP400G9-78110',holder:'Hoàng Thị Em',notes:''},
+    {sku:'NET-0002',name:'TP-Link Switch 24 cổng',cat:'Thiết bị mạng',status:'Đang trang bị',dept:'Phòng IT',serial:'TPSW24-00781',holder:'Đặng Văn Phúc',notes:'Đặt tại tủ rack tầng 3.'},
+    {sku:'LAP-0024',name:'MacBook Air M2',cat:'Máy tính xách tay',status:'Trong kho',dept:'—',serial:'MBA-M2-41209',holder:'—',notes:''},
+    {sku:'PRN-0011',name:'Canon imageCLASS MF445',cat:'Máy in',status:'Thanh lý',dept:'—',serial:'CN445-90021',holder:'—',notes:'Đã hết khấu hao, lập biên bản thanh lý.'},
+  ];
+
+  history = {
+    'LAP-0012':[
+      {type:'allocate',date:'12/03/2026',title:'Cấp phát cho Nguyễn Văn An',sub:'Phòng Kế toán · Phiếu DX-301'},
+      {type:'maint',date:'02/01/2026',title:'Bảo trì định kỳ — vệ sinh, thay pin CMOS',sub:'Kỹ thuật viên: Đặng Văn Phúc'},
+      {type:'return',date:'28/12/2025',title:'Thu hồi từ Trần Thị Bình',sub:'Tình trạng: tốt · Phòng Nhân sự'},
+      {type:'allocate',date:'05/06/2025',title:'Cấp phát cho Trần Thị Bình',sub:'Phòng Nhân sự · Phiếu DX-244'},
+      {type:'create',date:'05/06/2025',title:'Nhập kho thiết bị',sub:'Hóa đơn mua HD-2025-118'},
+    ],
+  };
+
+  requests = [
+    {code:'DX-301',dept:'Phòng Kế toán',requester:'Nguyễn Văn An',date:'12/03/2026',status:'Đang trang bị',count:3,note:'Trang bị cho 2 nhân viên mới phòng Kế toán.'},
+    {code:'DX-300',dept:'Phòng Kinh doanh',requester:'Vũ Minh Đức',date:'09/03/2026',status:'Đang trang bị',count:2,note:'Bổ sung điện thoại cho đội sales thị trường.'},
+    {code:'DX-298',dept:'Phòng IT',requester:'Đặng Văn Phúc',date:'03/03/2026',status:'Hoàn tất',count:5,note:'Nâng cấp thiết bị mạng tầng 3.'},
+    {code:'DX-295',dept:'Phòng Nhân sự',requester:'Hoàng Thị Em',date:'24/02/2026',status:'Hoàn tất',count:1,note:''},
+    {code:'DX-293',dept:'Phòng Hành chính',requester:'Phạm Thị Dung',date:'18/02/2026',status:'Đang xử lý',count:2,note:'Chờ duyệt ngân sách quý 1.'},
+    {code:'DX-290',dept:'Phòng Kỹ thuật',requester:'Lê Hoàng Cường',date:'10/02/2026',status:'Hoàn tất',count:4,note:''},
+  ];
+
+  reqLines = {
+    'DX-301':[
+      {sku:'LAP-0012',name:'Dell Latitude 5440',cat:'Máy tính xách tay',status:'Đang trang bị',holder:'Nguyễn Văn An'},
+      {sku:'MON-0034',name:'Dell P2422H 24"',cat:'Màn hình',status:'Đang trang bị',holder:'Nguyễn Văn An'},
+      {sku:'PRN-0007',name:'HP LaserJet Pro M404',cat:'Máy in',status:'Đang trang bị',holder:'Phòng Kế toán'},
+    ],
+  };
+
+  chart = [
+    {label:'T1',a:42,b:18},{label:'T2',a:38,b:22},{label:'T3',a:55,b:25},{label:'T4',a:47,b:30},
+    {label:'T5',a:61,b:28},{label:'T6',a:58,b:34},{label:'T7',a:44,b:26},{label:'T8',a:67,b:31},
+    {label:'T9',a:72,b:38},{label:'T10',a:64,b:40},{label:'T11',a:78,b:35},{label:'T12',a:69,b:42},
+  ];
+
+  go(s){ this.setState({ screen:s, modal:null }); if(typeof window!=='undefined'){try{window.scrollTo(0,0)}catch(e){}} }
+  login(){ this.setState({ loggedIn:true, screen:'dashboard' }); }
+  logout(){ this.setState({ loggedIn:false }); }
+  toggleSidebar(){ this.setState(s=>({ collapsed:!s.collapsed })); }
+  toggleTheme(){ this.setState(s=>({ dark:!s.dark })); }
+  toggleRole(){ this.setState(s=>({ role: s.role==='admin'?'staff':'admin' })); }
+
+  H(s){ return React.createElement('span',{style:{display:'inline-flex',alignItems:'center',justifyContent:'center'},dangerouslySetInnerHTML:{__html:s}}); }
+  badge(status){ const m=this.STATUS[status]||{bg:'rgba(100,116,139,.16)',fg:'#64748b'}; return {label:status, style:`display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:${m.bg};color:${m.fg}`}; }
+
+  navStyle(id){ const active=this.state.screen===id || (id==='devices'&&this.state.screen==='deviceDetail') || (id==='requests'&&this.state.screen==='requestDetail'); const base='display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:var(--rad-sm);cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;transition:background .12s;'; return base + (active ? 'background:var(--primary-tint);color:var(--primary);font-weight:600' : 'color:var(--text-muted)'); }
+
+  renderVals(){
+    const s=this.state, dark=s.dark, admin=s.role==='admin';
+    // ---- Tweakable feel controls (read via this.props) ----
+    const ACCENTS = {
+      'Xanh dương':   { light:['#2563eb','#1d4ed8'], dark:['#3b82f6','#2563eb'] },
+      'Xanh mòng két':{ light:['#0d9488','#0f766e'], dark:['#14b8a6','#0d9488'] },
+      'Tím hoàng hôn':{ light:['#7c3aed','#6d28d9'], dark:['#8b5cf6','#7c3aed'] },
+      'Lục rừng':     { light:['#059669','#047857'], dark:['#10b981','#059669'] },
+    };
+    const ac = (ACCENTS[this.props.accent] || ACCENTS['Xanh dương'])[dark?'dark':'light'];
+    const DENS = { 'Thoáng':['62px','14px'], 'Tiêu chuẩn':['54px','13.5px'], 'Gọn':['44px','12.5px'] };
+    const dn = DENS[this.props.density] || DENS['Tiêu chuẩn'];
+    const CHROME = { 'Mềm mại':['18px','13px','10px'], 'Tiêu chuẩn':['12px','9px','7px'], 'Sắc nét':['3px','3px','2px'] };
+    const cr = CHROME[this.props.chrome] || CHROME['Tiêu chuẩn'];
+
+    const themeBase = dark
+      ? '--bg:#0b1220;--surface:#111827;--surface-2:#1a2333;--border:#26303f;--text:#e8edf5;--text-muted:#8b98ad;--hoverbg:rgba(148,163,184,.1);--barmuted:#334155;--sidebar:#0e1626'
+      : '--bg:#f6f8fb;--surface:#ffffff;--surface-2:#f1f5f9;--border:#e6eaf0;--text:#0f172a;--text-muted:#64748b;--hoverbg:rgba(15,23,42,.045);--barmuted:#cbd5e1;--sidebar:#ffffff';
+    const accentVars = `--primary:${ac[0]};--primary-hover:${ac[1]};--primary-soft:color-mix(in srgb, ${ac[0]} 12%, transparent);--primary-soft2:color-mix(in srgb, ${ac[0]} 6%, transparent);--primary-tint:color-mix(in srgb, ${ac[0]} 15%, transparent)`;
+    const themeVars = `${themeBase};${accentVars};--rh:${dn[0]};--tfs:${dn[1]};--rad-lg:${cr[0]};--rad-md:${cr[1]};--rad-sm:${cr[2]}`;
+
+    const titles={dashboard:['Tổng quan','Bảng điều khiển hệ thống'],devices:['Quản lý thiết bị','Danh sách toàn bộ thiết bị'],deviceDetail:['Chi tiết thiết bị','Thông tin & lịch sử'],requests:['Phiếu đề nghị','Yêu cầu cấp phát thiết bị'],requestDetail:['Chi tiết phiếu','Danh sách thiết bị trên phiếu'],allocate:['Cấp phát lẻ','Bàn giao thiết bị cho nhân viên'],reports:['Báo cáo','Thống kê & xuất dữ liệu'],catalog:['Danh mục','Loại thiết bị · Phòng ban · Nhân viên'],settings:['Cài đặt','Hệ thống & người dùng']};
+    const t=titles[s.screen]||titles.dashboard;
+
+    const navDefs=[['dashboard','Tổng quan'],['devices','Thiết bị'],['requests','Phiếu đề nghị'],['allocate','Cấp phát lẻ'],['reports','Báo cáo'],['catalog','Danh mục'],['settings','Cài đặt']];
+    const navItems=navDefs.map(([id,label])=>({id,label,icon:this.H(this.ICON[id]),style:this.navStyle(id),go:()=>this.go(id)}));
+
+    const tin=this.devices.filter(d=>d.status==='Trong kho').length;
+    const tcap=this.devices.filter(d=>d.status==='Đang trang bị').length;
+    const tmaint=this.devices.filter(d=>d.status==='Đang bảo trì').length;
+    const tbroken=this.devices.filter(d=>d.status==='Hỏng').length;
+    const statCards=[
+      {label:'Tổng thiết bị',value:this.devices.length+ 144,icon:this.H(this.ICON.box),tint:'var(--primary-soft)',color:'var(--primary)',delta:'+12',deltaLabel:'so với tháng trước'},
+      {label:'Đang cấp phát',value:tcap+86,icon:this.H(this.ICON.check),tint:'rgba(22,163,74,.13)',color:'#16a34a',delta:'68%',deltaLabel:'tỷ lệ sử dụng'},
+      {label:'Đang bảo trì',value:tmaint+6,icon:this.H(this.ICON.wrench),tint:'rgba(202,138,4,.15)',color:'#ca8a04',delta:'3',deltaLabel:'quá hạn xử lý'},
+      {label:'Hỏng / Thanh lý',value:tbroken+4,icon:this.H(this.ICON.alert),tint:'rgba(220,38,38,.12)',color:'#dc2626',delta:'−2',deltaLabel:'đã thanh lý tháng này'},
+    ];
+
+    const alerts=[
+      {icon:this.H(this.ICON.clock),tint:'rgba(220,38,38,.12)',color:'#dc2626',title:'3 thiết bị quá hạn trả về',sub:'LAP-0012, MON-0034 — quá 5 ngày'},
+      {icon:this.H(this.ICON.box),tint:'rgba(202,138,4,.15)',color:'#ca8a04',title:'Sắp hết: Máy tính xách tay',sub:'Còn 2 máy trong kho (ngưỡng 5)'},
+      {icon:this.H(this.ICON.wrench),tint:'rgba(37,99,235,.12)',color:'#2563eb',title:'LG 27UP650 đang bảo hành',sub:'MON-0041 — đã 8 ngày chưa hoàn tất'},
+      {icon:this.H(this.ICON.alert),tint:'rgba(220,38,38,.12)',color:'#dc2626',title:'Samsung A54 chờ thanh lý',sub:'PHN-0025 — vỡ màn hình'},
+    ];
+
+    const maxV=Math.max(...this.chart.map(m=>m.a+m.b));
+    const niceMax=Math.ceil(maxV/20)*20;
+    const chartData=this.chart.map((m,i)=>({label:m.label, hovered:s.hoverBar===i, tip:`Cấp ${m.a} · Trả ${m.b}`, enter:()=>this.setState({hoverBar:i}), barStyle:`width:55%;height:${(m.a/niceMax*100).toFixed(1)}%;background:var(--primary);border-radius:3px 3px 0 0;min-height:3px`, barStyle2:`width:45%;height:${(m.b/niceMax*100).toFixed(1)}%;background:var(--barmuted);border-radius:3px 3px 0 0;min-height:3px`}));
+    const gridLines=[0,1,2,3,4].map(i=>{ const v=niceMax/4*i; const pct=i/4; return {value:Math.round(v), bottom:`calc(22px + ${pct} * (100% - 22px))`, labelBottom:`calc(22px + ${pct} * (100% - 22px) - 7px)`}; });
+    const chartTotal=this.chart.reduce((a,m)=>a+m.a,0);
+
+    // ---- Device list ----
+    const statusKeys=['all','Trong kho','Đang trang bị','Đang bảo trì','Hỏng','Thanh lý'];
+    const cnt=(k)=> k==='all'?this.devices.length:this.devices.filter(d=>d.status===k).length;
+    const chipStyle=(active)=>'display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:var(--rad-sm);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;border:1px solid '+(active?'var(--primary)':'var(--border)')+';background:'+(active?'var(--primary-soft)':'var(--surface)')+';color:'+(active?'var(--primary)':'var(--text-muted)');
+    const filterChips=statusKeys.map(k=>({key:k,label:k==='all'?'Tất cả':k,count:cnt(k),active:s.deviceFilter===k,style:chipStyle(s.deviceFilter===k),onClick:()=>this.setState({deviceFilter:k})}));
+    const q=s.deviceQuery.trim().toLowerCase();
+    const filteredDevices=this.devices.filter(d=>{
+      const okF = s.deviceFilter==='all' || d.status===s.deviceFilter;
+      const okQ = !q || (d.sku+d.name+d.holder+d.dept+d.serial).toLowerCase().includes(q);
+      return okF&&okQ;
+    }).map(d=>({...d, badge:this.badge(d.status).style, holderText:d.holder==='—'?'—':d.holder, view:()=>this.setState({screen:'deviceDetail',selectedDevice:d.sku})}));
+
+    // ---- Dashboard: "Đang trang bị" devices grouped by department (4 cards) ----
+    const showDeptGrid = this.props.groupByDept ?? true;
+    const deptAlloc = [
+      {dept:'Phòng Kinh doanh', count:28, lender:'Đặng Văn Phúc', reqs:[
+        {code:'DX-300', requester:'Vũ Minh Đức', date:'09/03/2026', status:'Đang trang bị', items:[
+          {name:'iPhone 13 128GB', datetime:'09/03/2026 14:20', borrower:'Vũ Minh Đức'},
+          {name:'Dell P2422H 24"', datetime:'09/03/2026 14:25', borrower:'Vũ Minh Đức'},
+        ]},
+        {code:'DX-287', requester:'Trần Thị Mai', date:'21/02/2026', status:'Hoàn tất', items:[
+          {name:'Dell Latitude 5440', datetime:'21/02/2026 09:10', borrower:'Trần Thị Mai'},
+          {name:'HP LaserJet Pro M404', datetime:'21/02/2026 09:15', borrower:'Trần Thị Mai'},
+          {name:'Dell P2422H 24"', datetime:'21/02/2026 09:20', borrower:'Lê Văn Hùng'},
+        ]},
+      ]},
+      {dept:'Phòng Kỹ thuật', count:24, lender:'Đặng Văn Phúc', reqs:[
+        {code:'DX-290', requester:'Lê Hoàng Cường', date:'10/02/2026', status:'Hoàn tất', items:[
+          {name:'ThinkPad T14 Gen 4', datetime:'10/02/2026 08:30', borrower:'Lê Hoàng Cường'},
+          {name:'LG 27UP650 27"', datetime:'10/02/2026 08:35', borrower:'Lê Hoàng Cường'},
+        ]},
+        {code:'DX-281', requester:'Phan Văn Tú', date:'02/02/2026', status:'Hoàn tất', items:[
+          {name:'HP LaserJet Pro M404', datetime:'02/02/2026 11:15', borrower:'Ngô Thị Lan'},
+          {name:'Dell P2422H 24"', datetime:'02/02/2026 11:20', borrower:'Phan Văn Tú'},
+        ]},
+      ]},
+      {dept:'Phòng Kế toán', count:21, lender:'Đặng Văn Phúc', reqs:[
+        {code:'DX-301', requester:'Nguyễn Văn An', date:'12/03/2026', status:'Đang trang bị', items:[
+          {name:'Dell Latitude 5440', datetime:'12/03/2026 09:00', borrower:'Nguyễn Văn An'},
+          {name:'HP ProDesk 400 G9', datetime:'12/03/2026 09:05', borrower:'Đỗ Văn Khải'},
+          {name:'Dell P2422H 24"', datetime:'12/03/2026 09:08', borrower:'Nguyễn Văn An'},
+          {name:'HP LaserJet Pro M404', datetime:'12/03/2026 09:12', borrower:'Phạm Thị Dung'},
+          {name:'Logitech MX Keys', datetime:'12/03/2026 09:15', borrower:'Đỗ Văn Khải'},
+          {name:'iPhone 13 128GB', datetime:'12/03/2026 09:20', borrower:'Nguyễn Văn An'},
+          {name:'ThinkPad T14 Gen 4', datetime:'12/03/2026 09:24', borrower:'Lê Thị Hồng'},
+          {name:'Dell P2422H 24"', datetime:'12/03/2026 09:28', borrower:'Lê Thị Hồng'},
+        ]},
+        {code:'DX-279', requester:'Phạm Thị Dung', date:'28/01/2026', status:'Hoàn tất', items:[
+          {name:'HP LaserJet Pro M404', datetime:'28/01/2026 13:40', borrower:'Phạm Thị Dung'},
+        ]},
+      ]},
+      {dept:'Phòng IT', count:19, lender:'Trần Quốc Bảo', reqs:[
+        {code:'DX-298', requester:'Đặng Văn Phúc', date:'03/03/2026', status:'Hoàn tất', items:[
+          {name:'TP-Link Switch 24 cổng', datetime:'03/03/2026 15:30', borrower:'Đặng Văn Phúc'},
+          {name:'HP ProDesk 400 G9', datetime:'03/03/2026 15:35', borrower:'Hoàng Thị Em'},
+        ]},
+        {code:'DX-272', requester:'Hoàng Thị Em', date:'19/01/2026', status:'Hoàn tất', items:[
+          {name:'MacBook Air M2', datetime:'19/01/2026 09:50', borrower:'Bùi Thị Giang'},
+        ]},
+      ]},
+    ];
+    const deptAllocTotal = deptAlloc.reduce((a,d)=>a+d.count,0);
+    const reqChip=(active)=>'flex:none;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:700;font-family:Consolas,monospace;cursor:pointer;white-space:nowrap;border:1px solid '+(active?'var(--primary)':'var(--border)')+';background:'+(active?'var(--primary)':'var(--surface-2)')+';color:'+(active?'#fff':'var(--text-muted)');
+    const PER_PAGE = 6;
+    const pgBtn=(active)=>'min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;padding:0 6px;border-radius:var(--rad-sm);font-size:12px;font-weight:600;cursor:pointer;border:1px solid '+(active?'var(--primary)':'var(--border)')+';background:'+(active?'var(--primary-soft)':'var(--surface)')+';color:'+(active?'var(--primary)':'var(--text-muted)');
+    const deptCards = deptAlloc.map(d=>{
+      const share = Math.round(d.count/deptAllocTotal*100);
+      const activeCode = this.state.deptTab[d.dept] || d.reqs[0].code;
+      const activeReq = d.reqs.find(r=>r.code===activeCode) || d.reqs[0];
+      const chips = d.reqs.map(r=>({code:r.code, style:reqChip(r.code===activeReq.code), onClick:()=>this.setDeptTab(d.dept, r.code)}));
+      const allItems = activeReq.items.map(it=>({...it, lender:d.lender, returnable: activeReq.status==='Đang trang bị', ret:()=>this.setState({modal:{device:{name:it.name, sku:'—', holder:it.borrower}, req:activeReq.code}})}));
+      const pageCount = Math.max(1, Math.ceil(allItems.length / PER_PAGE));
+      const curPage = Math.min(this.state.deptPage[d.dept] || 1, pageCount);
+      const items = allItems.slice((curPage-1)*PER_PAGE, curPage*PER_PAGE);
+      const pages = Array.from({length:pageCount}, (_,i)=>({n:i+1, style:pgBtn(i+1===curPage), onClick:()=>this.setDeptPage(d.dept, i+1)}));
+      return {dept:d.dept, count:d.count, share, chips, items,
+        reqMeta:`${activeReq.requester} · ${activeReq.date}`, reqStatus:activeReq.status, reqBadge:this.badge(activeReq.status).style, reqItemCount:`${activeReq.items.length} thiết bị`,
+        isActiveReq: activeReq.status==='Đang trang bị',
+        hasPager: pageCount>1, pages, pageInfo:`Trang ${curPage}/${pageCount}`,
+        prevStyle:pgBtn(false), nextStyle:pgBtn(false),
+        prevPage:()=>this.setDeptPage(d.dept, Math.max(1,curPage-1)), nextPage:()=>this.setDeptPage(d.dept, Math.min(pageCount,curPage+1)),
+        go:()=>this.go('devices')};
+    });
+
+    // ---- Device detail ----
+    const dev=this.devices.find(d=>d.sku===s.selectedDevice)||this.devices[0];
+    const devBadge=this.badge(dev.status).style;
+    const hist=(this.history[dev.sku]||this.history['LAP-0012']).map(h=>{
+      const meta={allocate:{c:'#2563eb',t:'rgba(37,99,235,.12)',i:this.ICON.check},return:{c:'#16a34a',t:'rgba(22,163,74,.13)',i:this.ICON.down},maint:{c:'#ca8a04',t:'rgba(202,138,4,.16)',i:this.ICON.wrench},create:{c:'#64748b',t:'rgba(100,116,139,.16)',i:this.ICON.box}}[h.type];
+      return {...h, color:meta.c, tint:meta.t, icon:this.H(meta.i)};
+    });
+    const devInfo=[
+      {k:'Mã thiết bị (SKU)',v:dev.sku},{k:'Tên thiết bị',v:dev.name},
+      {k:'Loại thiết bị',v:dev.cat},{k:'Số serial',v:dev.serial},
+      {k:'Trạng thái',v:dev.status,badge:devBadge},{k:'Phòng đang giữ',v:dev.dept},
+      {k:'Người sử dụng',v:dev.holder},{k:'Ghi chú',v:dev.notes||'—'},
+    ];
+    const tabStyle=(active)=>'padding:10px 4px;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid '+(active?'var(--primary)':'transparent')+';color:'+(active?'var(--primary)':'var(--text-muted)');
+
+    // ---- Requests ----
+    const reqList=this.requests.map(r=>({...r, badge:this.badge(r.status).style, view:()=>this.setState({screen:'requestDetail',selectedRequest:r.code})}));
+    const req=this.requests.find(r=>r.code===s.selectedRequest)||this.requests[0];
+    const reqBadge=this.badge(req.status).style;
+    const reqDevices=(this.reqLines[req.code]||this.reqLines['DX-301']).map(l=>({...l, badge:this.badge(l.status).style, returnable:l.status==='Đang trang bị', ret:()=>this.setState({modal:{device:l, req:req.code}})}));
+    const reqMeta=[{k:'Phòng ban',v:req.dept},{k:'Người đề nghị',v:req.requester},{k:'Ngày lập',v:req.date},{k:'Số thiết bị',v:req.count+' thiết bị'}];
+
+    // ---- Available devices for pickers ----
+    const available=this.devices.filter(d=>d.status==='Trong kho');
+
+    // ---- Reports ----
+    const cats=['Máy tính xách tay','Máy tính để bàn','Màn hình','Máy in','Điện thoại','Máy chiếu','Thiết bị mạng'];
+    const reportRows=cats.map(c=>{
+      const ds=this.devices.filter(d=>d.cat===c);
+      const tot=ds.length+([5,3,7,4,6,2,3][cats.indexOf(c)]);
+      const cap=ds.filter(d=>d.status==='Đang trang bị').length+([3,2,4,2,4,0,2][cats.indexOf(c)]);
+      const inv=tot-cap;
+      return {cat:c, total:tot, cap, inv, rate:Math.round(cap/tot*100)+'%'};
+    });
+    const repTotal=reportRows.reduce((a,r)=>a+r.total,0);
+    const repCap=reportRows.reduce((a,r)=>a+r.cap,0);
+
+    // ---- Catalog ----
+    const catData={
+      cat:{cols:['Mã','Tên loại','Số thiết bị'],rows:[['MTXT','Máy tính xách tay','38'],['MTDB','Máy tính để bàn','24'],['MH','Màn hình','52'],['MIN','Máy in','11'],['DT','Điện thoại','29'],['MC','Máy chiếu','6'],['TBM','Thiết bị mạng','14']]},
+      dept:{cols:['Mã','Tên phòng ban','Số nhân viên'],rows:[['KT','Phòng Kế toán','12'],['NS','Phòng Nhân sự','8'],['KTH','Phòng Kỹ thuật','21'],['KD','Phòng Kinh doanh','34'],['IT','Phòng IT','9'],['HC','Phòng Hành chính','7'],['BGD','Ban Giám đốc','4']]},
+      emp:{cols:['Mã NV','Họ và tên','Phòng ban'],rows:[['NV001','Nguyễn Văn An','Phòng Kế toán'],['NV002','Trần Thị Bình','Phòng Nhân sự'],['NV003','Lê Hoàng Cường','Phòng Kỹ thuật'],['NV004','Phạm Thị Dung','Phòng Hành chính'],['NV005','Vũ Minh Đức','Phòng Kinh doanh'],['NV006','Hoàng Thị Em','Phòng Nhân sự'],['NV007','Đặng Văn Phúc','Phòng IT']]},
+    };
+    const ct=catData[s.catalogTab];
+    const catRows=ct.rows.map(r=>({c0:r[0],c1:r[1],c2:r[2]}));
+    const catTabBtn=(active)=>'padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;border-radius:var(--rad-sm);'+(active?'background:var(--surface);color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.08)':'color:var(--text-muted)');
+
+    // ---- Settings users ----
+    const users=[
+      {name:'Trần Quốc Bảo',user:'admin',role:'Quản trị viên',active:true,inactive:false},
+      {name:'Lê Thị Hằng',user:'hang.le',role:'Nhân viên',active:true,inactive:false},
+      {name:'Phạm Văn Khoa',user:'khoa.pham',role:'Nhân viên',active:true,inactive:false},
+      {name:'Đỗ Thị Lan',user:'lan.do',role:'Nhân viên',active:false,inactive:true},
+    ];
+
+    return {
+      themeVars,
+      isLogin: !s.loggedIn,
+      isApp: s.loggedIn,
+      showLabels: !s.collapsed,
+      sidebarStyle: `width:${s.collapsed?'68px':'232px'};flex:none;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width .18s ease;position:sticky;top:0;height:100vh;z-index:30`,
+      navItems,
+      collapseIcon: this.H(s.collapsed
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>'),
+      toggleSidebar:()=>this.toggleSidebar(),
+      toggleTheme:()=>this.toggleTheme(),
+      toggleRole:()=>this.toggleRole(),
+      themeIcon: this.H(dark
+        ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>'
+        : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'),
+      login:()=>this.login(),
+      logout:()=>this.logout(),
+      pageTitle:t[0], pageSub:t[1],
+      userName: admin?'Trần Quốc Bảo':'Lê Thị Hằng',
+      userInitials: admin?'TB':'LH',
+      roleLabel: admin?'Quản trị viên':'Nhân viên',
+      roleDot: admin?'#16a34a':'#ca8a04',
+      isAdmin: admin,
+      isDashboard: s.screen==='dashboard',
+      statCards, alerts, alertCount: alerts.length,
+      chartData, gridLines, chartTotal, leaveBar:()=>this.setState({hoverBar:-1}),
+
+      isDevices: s.screen==='devices',
+      isDeviceDetail: s.screen==='deviceDetail',
+      filterChips, filteredDevices, deviceCount: filteredDevices.length, totalCount: this.devices.length,
+      showDeptGrid, deptCards, deptAllocTotal,
+      iconDept: this.H('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9" y2="9.01"/><line x1="9" y1="12" x2="9" y2="12.01"/><line x1="9" y1="15" x2="9" y2="15.01"/></svg>'),
+      deviceQuery: s.deviceQuery,
+      onSearch:(e)=>this.setState({deviceQuery:e.target.value}),
+      iconSearch: this.H('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'),
+      iconScan: this.H('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>'),
+      iconView: this.H('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'),
+      iconEdit: this.H('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'),
+      iconSwap: this.H('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>'),
+      iconPlus: this.H('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'),
+      iconBack: this.H('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>'),
+      goDevices:()=>this.go('devices'),
+      dev, devBadge, devInfo, hist, devBig:this.H(this.ICON.box),
+      detailTab: s.detailTab, isHistTab: s.detailTab==='history', isInfoTab: s.detailTab==='info',
+      tabInfoStyle: tabStyle(s.detailTab==='info'), tabHistStyle: tabStyle(s.detailTab==='history'),
+      setInfoTab:()=>this.setState({detailTab:'info'}), setHistTab:()=>this.setState({detailTab:'history'}),
+
+      isRequests: s.screen==='requests',
+      isRequestDetail: s.screen==='requestDetail',
+      reqList, req, reqBadge, reqDevices, reqMeta,
+      goRequests:()=>this.go('requests'),
+      reqNote: req.note || 'Không có ghi chú.',
+      iconReturn: this.H('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>'),
+
+      isAllocate: s.screen==='allocate',
+      availOptions: available.map(d=>`${d.sku} — ${d.name}`),
+      empOptions: ['Nguyễn Văn An','Trần Thị Bình','Lê Hoàng Cường','Phạm Thị Dung','Vũ Minh Đức','Hoàng Thị Em','Đặng Văn Phúc','Bùi Thị Giang'],
+      deptOptions: ['Phòng Kế toán','Phòng Nhân sự','Phòng Kỹ thuật','Phòng Kinh doanh','Phòng IT','Phòng Hành chính','Ban Giám đốc'],
+      reqOptions: ['— Không liên kết —','DX-301','DX-300','DX-293'],
+
+      modalOpen: !!s.modal,
+      isAddModal: s.modal && s.modal.type==='add',
+      isReturnModal: s.modal && s.modal.type!=='add',
+      modalDevice: s.modal ? s.modal.device : null,
+      modalReqCode: s.modal ? s.modal.req : '',
+      closeModal:()=>this.setState({modal:null}),
+      stopProp:(e)=>e.stopPropagation(),
+      openAddDevice:()=>this.setState({modal:{type:'add', req:req.code}}),
+      availDevices: available.map(d=>({sku:d.sku, name:d.name, cat:d.cat})),
+      availCount: available.length,
+      iconClose: this.H('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'),
+
+      isReports: s.screen==='reports',
+      reportRows, repTotal, repCap, repRate: Math.round(repCap/repTotal*100)+'%',
+      iconExcel: this.H('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>'),
+      iconPdf: this.H('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'),
+
+      isCatalog: s.screen==='catalog',
+      catCols: ct.cols, catRows,
+      catTab: s.catalogTab,
+      catTabCatStyle: catTabBtn(s.catalogTab==='cat'),
+      catTabDeptStyle: catTabBtn(s.catalogTab==='dept'),
+      catTabEmpStyle: catTabBtn(s.catalogTab==='emp'),
+      setCatTab:(k)=>this.setState({catalogTab:k}),
+      setCatCat:()=>this.setState({catalogTab:'cat'}),
+      setCatDept:()=>this.setState({catalogTab:'dept'}),
+      setCatEmp:()=>this.setState({catalogTab:'emp'}),
+      iconTrash: this.H('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'),
+
+      isSettings: s.screen==='settings',
+      users,
+      iconCopy: this.H('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'),
+      dbPath: 'C:\\\\ProgramData\\\\EquipHub\\\\equiphub.db',
+    };
+  }
+}
+</script>
+</body>
+</html>

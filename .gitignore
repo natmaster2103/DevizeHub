@@ -1,0 +1,9 @@
+node_modules/
+dist/
+out/
+.DS_Store
+*.log
+equipment-manager/node_modules/
+equipment-manager/out/
+equipment-manager/dist/
+*.db
