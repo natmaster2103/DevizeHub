@@ -144,7 +144,7 @@ export default function DeviceDetail() {
           borderRadius: 'var(--rad-lg)', padding: '8px 24px'
         }}>
           {info.map((field, idx) => {
-            const isStatus = field.key === 'Trạng thái'
+            const isStatus = field.isStatus === true
             return (
               <div key={idx} style={{
                 display: 'grid', gridTemplateColumns: '200px 1fr',

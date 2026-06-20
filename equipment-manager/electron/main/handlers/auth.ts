@@ -10,6 +10,9 @@ const BAD_CREDS = { code: 'BAD_CREDENTIALS', message: 'Tên đăng nhập hoặc
 export function makeAuthHandlers(db: AppDb) {
   return {
     async login(args: LoginArgs): Promise<ApiResponse<LoginResult>> {
+      if (!args?.username || !args?.password || typeof args.username !== 'string' || typeof args.password !== 'string') {
+        return { ok: false, error: BAD_CREDS }
+      }
       const row = db.select().from(appUsers).where(eq(appUsers.username, args.username)).all()[0]
       // Check existence first (no bcrypt if user unknown)
       if (!row) return { ok: false, error: BAD_CREDS }

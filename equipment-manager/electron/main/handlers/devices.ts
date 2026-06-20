@@ -97,8 +97,8 @@ export function makeDeviceHandlers(db: AppDb) {
       }
 
       // Apply query (case-insensitive)
-      if (args.query.trim()) {
-        const q = args.query.toLowerCase()
+      if ((args.query ?? '').trim()) {
+        const q = (args.query ?? '').toLowerCase()
         deviceRows = deviceRows.filter(
           (d) =>
             d.sku.toLowerCase().includes(q) ||
@@ -116,6 +116,9 @@ export function makeDeviceHandlers(db: AppDb) {
     },
 
     async get(args: DeviceGetArgs): Promise<ApiResponse<DeviceDetailResult>> {
+      if (!args?.sku || typeof args.sku !== 'string') {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'SKU không hợp lệ.' } }
+      }
       // Fetch device + category
       const deviceRow = db
         .select({
@@ -172,7 +175,7 @@ export function makeDeviceHandlers(db: AppDb) {
         { key: 'Tên', value: deviceRow.name },
         { key: 'Loại', value: deviceRow.categoryName ?? '' },
         { key: 'Serial', value: deviceRow.serialNumber ?? '' },
-        { key: 'Trạng thái', value: deviceRow.status },
+        { key: 'Trạng thái', value: deviceRow.status, isStatus: true },
         { key: 'Phòng', value: deptName ?? '' },
         { key: 'Người dùng', value: holderName ?? '' },
         { key: 'Ghi chú', value: deviceRow.notes ?? '' },

@@ -39,7 +39,7 @@ export interface DeviceHistoryEntry {
   sub: string
   date: string // display string DD/MM/YYYY
 }
-export interface DeviceInfoField { key: string; value: string }
+export interface DeviceInfoField { key: string; value: string; isStatus?: boolean }
 export interface DeviceDetailResult {
   device: DeviceRow & { notes: string | null }
   info: DeviceInfoField[]
