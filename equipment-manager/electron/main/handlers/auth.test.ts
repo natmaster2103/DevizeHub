@@ -35,7 +35,7 @@ describe('auth handlers', () => {
     const h = setup()
     const res = await h.login({ username: 'lan.do', password: 'admin' })
     expect(res.ok).toBe(false)
-    if (!res.ok) expect(res.error.code).toBe('ACCOUNT_DISABLED')
+    if (!res.ok) expect(res.error.code).toBe('BAD_CREDENTIALS')
   })
 
   it('me() returns the current session and logout clears it', async () => {

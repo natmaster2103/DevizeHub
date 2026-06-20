@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { createDb } from './db'
 import { runMigrations } from './db/migrate'
@@ -25,12 +25,21 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const dbPath = join(app.getPath('userData'), 'equiphub.db')
-  const { db } = createDb(dbPath)
-  runMigrations(db)
-  seedIfEmpty(db)
-  registerHandlers(ipcMain, db)
+  try {
+    const { db } = createDb(dbPath)
+    runMigrations(db)
+    seedIfEmpty(db)
+    registerHandlers(ipcMain, db)
+  } catch (err) {
+    await dialog.showErrorBox(
+      'Lỗi khởi động',
+      `Không thể khởi tạo cơ sở dữ liệu.\n\nChi tiết: ${err instanceof Error ? err.message : String(err)}\n\nVui lòng khởi động lại ứng dụng.`
+    )
+    app.quit()
+    return
+  }
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

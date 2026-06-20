@@ -25,6 +25,7 @@ export function makeDashboardHandlers(db: AppDb) {
       const allocated = allDevices.filter((d) => d.status === 'allocated').length
       const maintenance = allDevices.filter((d) => d.status === 'maintenance').length
       const broken = allDevices.filter((d) => d.status === 'broken').length
+      const decommissioned = allDevices.filter((d) => d.status === 'decommissioned').length
 
       // ── DeptCards ──────────────────────────────────────────────────────────
       // Fetch all allocations with request info, department, employee, lender
@@ -160,7 +161,7 @@ export function makeDashboardHandlers(db: AppDb) {
       return {
         ok: true,
         data: {
-          stats: { total, allocated, maintenance, broken },
+          stats: { total, allocated, maintenance, broken, decommissioned },
           deptCards,
           deptAllocTotal,
         },

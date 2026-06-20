@@ -250,7 +250,11 @@ export default function Dashboard() {
         display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
         gap: 16, marginBottom: 18
       }}>
-        {STAT_DEFS.map(({ label, key, Icon, color, tint }) => (
+        {STAT_DEFS.map(({ label, key, Icon, color, tint }) => {
+          const value = key === 'broken'
+            ? (data.stats.broken ?? 0) + (data.stats.decommissioned ?? 0)
+            : data.stats[key]
+          return (
           <div key={key} style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: 'var(--rad-lg)', padding: '18px 18px 16px'
@@ -261,7 +265,7 @@ export default function Dashboard() {
                 <div style={{
                   fontSize: 30, fontWeight: 700, letterSpacing: '-.02em',
                   marginTop: 6, lineHeight: 1
-                }}>{data.stats[key]}</div>
+                }}>{value}</div>
               </div>
               <div style={{
                 width: 42, height: 42, borderRadius: 'var(--rad-md)',
@@ -272,7 +276,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        ))}
+        )})}
       </div>
 
       {/* Dept section */}

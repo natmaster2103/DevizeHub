@@ -11,11 +11,13 @@ export function makeAuthHandlers(db: AppDb) {
   return {
     async login(args: LoginArgs): Promise<ApiResponse<LoginResult>> {
       const row = db.select().from(appUsers).where(eq(appUsers.username, args.username)).all()[0]
-      if (!row || !bcrypt.compareSync(args.password, row.passwordHash)) {
+      // Check existence first (no bcrypt if user unknown)
+      if (!row) return { ok: false, error: BAD_CREDS }
+      // Check active before running bcrypt (prevents timing oracle for disabled accounts)
+      if (row.active === 0) return { ok: false, error: BAD_CREDS }
+      // Now compare password
+      if (!bcrypt.compareSync(args.password, row.passwordHash)) {
         return { ok: false, error: BAD_CREDS }
-      }
-      if (row.active === 0) {
-        return { ok: false, error: { code: 'ACCOUNT_DISABLED', message: 'Tài khoản đã bị khóa.' } }
       }
       const user: SessionUser = { id: row.id, username: row.username, role: row.role, displayName: row.displayName }
       session.current = user

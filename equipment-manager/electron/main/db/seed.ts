@@ -311,7 +311,6 @@ export function seedIfEmpty(db: AppDb): void {
             datetime: '12/03/2026 09:12',
             borrower: 'Phạm Thị Dung',
           },
-          { name: 'Logitech MX Keys', datetime: '12/03/2026 09:15', borrower: 'Đỗ Văn Khải' },
           { name: 'iPhone 13 128GB', datetime: '12/03/2026 09:20', borrower: 'Nguyễn Văn An' },
           { name: 'ThinkPad T14 Gen 4', datetime: '12/03/2026 09:24', borrower: 'Lê Thị Hồng' },
           { name: 'Dell P2422H 24"', datetime: '12/03/2026 09:28', borrower: 'Lê Thị Hồng' },

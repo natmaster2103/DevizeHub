@@ -51,7 +51,7 @@ export interface DeptCardItem { name: string; datetime: string; borrower: string
 export interface DeptCardRequest { code: string; requester: string; date: string; status: 'allocated' | 'completed'; items: DeptCardItem[] }
 export interface DeptCard { dept: string; count: number; share: number; requests: DeptCardRequest[] }
 export interface DashboardSummary {
-  stats: { total: number; allocated: number; maintenance: number; broken: number }
+  stats: { total: number; allocated: number; maintenance: number; broken: number; decommissioned: number }
   deptCards: DeptCard[]
   deptAllocTotal: number
 }
