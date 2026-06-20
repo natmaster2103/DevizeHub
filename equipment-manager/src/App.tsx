@@ -1,3 +1,7 @@
 export default function App() {
-  return <div style={{ padding: 24, fontFamily: 'system-ui' }}>EquipHub — đang khởi tạo…</div>
+  return (
+    <div className="app-theme">
+      <div style={{ padding: 24 }}>EquipHub — tokens loaded</div>
+    </div>
+  )
 }
