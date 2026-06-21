@@ -7,9 +7,9 @@
   "license": "UNLICENSED",
   "scripts": {
     "predev": "electron-rebuild -f -w better-sqlite3",
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "start": "electron-vite preview",
+    "dev": "env -u ELECTRON_RUN_AS_NODE electron-vite dev",
+    "build": "env -u ELECTRON_RUN_AS_NODE electron-vite build",
+    "start": "env -u ELECTRON_RUN_AS_NODE electron-vite preview",
     "typecheck:node": "tsc -p tsconfig.node.json --noEmit",
     "typecheck:web": "tsc -p tsconfig.json --noEmit",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
