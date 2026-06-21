@@ -17,9 +17,10 @@ export default defineConfig({
     resolve: { alias: { '@shared': resolve('electron/shared') } }
   },
   renderer: {
+    root: '.',
     server: { port: 5173 },
     build: {
-      rollupOptions: { input: 'index.html' }
+      rollupOptions: { input: resolve('index.html') }
     },
     plugins: [react()],
     resolve: { alias: { '@': resolve('src'), '@shared': resolve('electron/shared') } }
