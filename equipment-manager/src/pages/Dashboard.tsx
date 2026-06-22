@@ -195,11 +195,13 @@ function DeptCardPanel({
   isDrop,
   onDragOver,
   onDrop,
+  onDragLeave,
 }: {
   card: DeptCard
   isDrop?: boolean
   onDragOver?(): void
   onDrop?(): void
+  onDragLeave?(): void
 }) {
   const firstCode = card.requests[0]?.code ?? ''
   const [activeCode, setActiveCode] = useState(firstCode)
@@ -222,6 +224,7 @@ function DeptCardPanel({
     <div
       onDragOver={e => { e.preventDefault(); onDragOver?.() }}
       onDrop={e => { e.preventDefault(); onDrop?.() }}
+      onDragLeave={() => onDragLeave?.()}
       style={{
         background: 'var(--surface)',
         border: `1px solid ${isDrop ? 'var(--primary)' : 'var(--border)'}`,
@@ -557,6 +560,7 @@ export default function Dashboard() {
                 card={card}
                 isDrop={dropDept === card.dept}
                 onDragOver={() => setDropDept(card.dept)}
+                onDragLeave={() => setDropDept(null)}
                 onDrop={() => {
                   setDropDept(null)
                   if (dragStateRef.current) {
