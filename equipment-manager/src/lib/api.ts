@@ -5,6 +5,10 @@ export const api: Api = {
   get auth() { return window.api.auth },
   get devices() { return window.api.devices },
   get dashboard() { return window.api.dashboard },
+  get requests() { return window.api.requests },
+  get allocate() { return window.api.allocate },
+  get catalog() { return window.api.catalog },
+  get settings() { return window.api.settings },
 }
 
 export async function unwrap<T>(p: Promise<ApiResponse<T>>): Promise<T> {

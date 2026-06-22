@@ -14,9 +14,11 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
 
 function usePageMeta() {
   const { pathname } = useLocation()
-  // Match /devices/:sku
   if (pathname.startsWith('/devices/')) {
     return { title: 'Chi tiết thiết bị', subtitle: pathname.replace('/devices/', '') }
+  }
+  if (pathname.startsWith('/requests/')) {
+    return { title: 'Chi tiết phiếu', subtitle: 'Phiếu đề nghị' }
   }
   return TITLES[pathname] ?? { title: pathname, subtitle: '' }
 }

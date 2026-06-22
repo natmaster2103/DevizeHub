@@ -12,7 +12,7 @@ describe('registerHandlers', () => {
     runMigrations(db); seedIfEmpty(db)
     const handlers = new Map<string, Function>()
     const ipcMain = { handle: (ch: string, fn: Function) => handlers.set(ch, fn) }
-    registerHandlers(ipcMain as any, db)
+    registerHandlers(ipcMain as any, db, ':memory:')
     for (const ch of Object.values(CHANNELS)) {
       expect(handlers.has(ch)).toBe(true)
     }
@@ -23,7 +23,7 @@ describe('registerHandlers', () => {
     runMigrations(db); seedIfEmpty(db)
     const handlers = new Map<string, Function>()
     const ipcMain = { handle: (ch: string, fn: Function) => handlers.set(ch, fn) }
-    registerHandlers(ipcMain as any, db)
+    registerHandlers(ipcMain as any, db, ':memory:')
     // Simulate a logged-in session
     session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin' }
     const res = await handlers.get(CHANNELS.devicesList)!({}, { filter: 'all', query: '' })
@@ -36,7 +36,7 @@ describe('registerHandlers', () => {
     runMigrations(db); seedIfEmpty(db)
     const handlers = new Map<string, Function>()
     const ipcMain = { handle: (ch: string, fn: Function) => handlers.set(ch, fn) }
-    registerHandlers(ipcMain as any, db)
+    registerHandlers(ipcMain as any, db, ':memory:')
     session.current = null
     const res = await handlers.get(CHANNELS.devicesList)!({}, { filter: 'all', query: '' })
     expect(res.ok).toBe(false)

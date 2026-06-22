@@ -35,7 +35,7 @@ app.whenReady().then(async () => {
     const { db } = createDb(dbPath)
     runMigrations(db)
     seedIfEmpty(db)
-    registerHandlers(ipcMain, db)
+    registerHandlers(ipcMain, db, dbPath)
   } catch (err) {
     await dialog.showErrorBox(
       'Lỗi khởi động',
