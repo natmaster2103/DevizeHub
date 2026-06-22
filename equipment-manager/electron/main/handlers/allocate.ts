@@ -1,4 +1,4 @@
-import { eq, isNull, inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import { devices, categories, allocations, employees, departments, requests } from '../db/schema'
 import { session } from '../session'
