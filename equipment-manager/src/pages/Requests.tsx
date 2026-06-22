@@ -244,7 +244,7 @@ function CreateRequestDialog({ onClose }: CreateRequestDialogProps) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-const COL = '140px 1fr 1fr 120px 60px 130px 36px'
+const COL = '140px 1fr 1fr 60px 130px 36px'
 
 export default function Requests() {
   const navigate = useNavigate()
