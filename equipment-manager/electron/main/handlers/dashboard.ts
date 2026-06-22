@@ -1,4 +1,4 @@
-import { eq, isNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import {
   devices,
@@ -57,10 +57,6 @@ export function makeDashboardHandlers(db: AppDb) {
         })
         .from(requests)
         .all()
-
-      // Fetch all employees for requester lookup
-      const allEmployees = db.select({ id: employees.id, name: employees.name }).from(employees).all()
-      const empById = new Map(allEmployees.map((e) => [e.id, e.name]))
 
       // Fetch all app users for lender lookup
       const allUsers = db.select({ id: appUsers.id, displayName: appUsers.displayName }).from(appUsers).all()
@@ -133,11 +129,8 @@ export function makeDashboardHandlers(db: AppDb) {
           }
         })
 
-        const requesterName = req.employeeId != null ? (empById.get(req.employeeId) ?? '') : ''
-
         group.requestCards.push({
           code: req.code ?? '',
-          requester: requesterName,
           date: fmtDate(req.createdAt),
           status,
           items,
@@ -153,6 +146,7 @@ export function makeDashboardHandlers(db: AppDb) {
 
       const deptCards: DeptCard[] = topGroups.map((g) => ({
         dept: g.deptName,
+        deptId: g.deptId,
         count: g.activeCount,
         share: deptAllocTotal > 0 ? Math.round((g.activeCount / deptAllocTotal) * 100) : 0,
         requests: g.requestCards,
