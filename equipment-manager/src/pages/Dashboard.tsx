@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDashboard } from '@/hooks/useDashboard'
-import type { DeptCard, DeptCardRequest, DashboardSummary } from '@shared/ipc'
+import type { DeptCard, DeptCardRequest, DashboardSummary, AvailableDeviceRow, QuickAllocateArgs } from '@shared/ipc'
 import {
   IconBox, IconCheck, IconWrench, IconAlert, IconReturn, IconBuilding
 } from '@/lib/icons'
+import { AllocationDrawer } from '@/components/AllocationDrawer'
+import { api, unwrap } from '@/lib/api'
 
 const PAGE_SIZE = 6
 
@@ -30,7 +33,174 @@ const STAT_DEFS: StatDef[] = [
   { label: 'Hỏng/Thanh lý', key: 'broken', Icon: IconAlert, color: '#dc2626', tint: 'rgba(220,38,38,.14)' },
 ]
 
-function DeptCardPanel({ card }: { card: DeptCard }) {
+function IconX({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+function LendConfirmDialog({
+  devices, dept, loading, error, onClose, onConfirm,
+}: {
+  devices: AvailableDeviceRow[]
+  dept: string
+  deptId: number
+  requestId: number | null
+  loading: boolean
+  error: string
+  onClose(): void
+  onConfirm(borrowerName: string, notes: string): void
+}) {
+  const [borrowerName, setBorrowerName] = useState('')
+  const [notes, setNotes] = useState('')
+  const [localError, setLocalError] = useState('')
+
+  function submit() {
+    if (!borrowerName.trim()) { setLocalError('Vui lòng nhập tên người mượn.'); return }
+    setLocalError('')
+    onConfirm(borrowerName.trim(), notes)
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', height: 40, padding: '0 12px',
+    border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+    background: 'var(--surface)', color: 'var(--text)',
+    fontSize: 14, outline: 'none', boxSizing: 'border-box',
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 110,
+        background: 'rgba(15,23,42,.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: 460, background: 'var(--surface)', borderRadius: 'var(--rad-lg)',
+          boxShadow: '0 24px 60px rgba(0,0,0,.3)', overflow: 'hidden'
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px', borderBottom: '1px solid var(--border)'
+        }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Xác nhận cấp phát</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+              Phòng ban: <strong>{dept}</strong>
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+            borderRadius: 'var(--rad-sm)'
+          }}>
+            <IconX size={16} />
+          </button>
+        </div>
+
+        {/* Device list */}
+        <div style={{
+          maxHeight: 168, overflowY: 'auto',
+          borderBottom: '1px solid var(--border)'
+        }}>
+          {devices.map(d => (
+            <div key={d.sku} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 20px', borderBottom: '1px solid var(--border)',
+              fontSize: 13
+            }}>
+              <div style={{ flex: 1, fontWeight: 600 }}>{d.name}</div>
+              <div style={{
+                fontSize: 11, color: 'var(--text-muted)',
+                fontFamily: "'Consolas',monospace"
+              }}>{d.sku}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Form */}
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+              Tên người mượn <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+            <input
+              value={borrowerName}
+              onChange={e => setBorrowerName(e.target.value)}
+              placeholder="Nhập tên người mượn"
+              style={inputStyle}
+              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+              Ghi chú
+            </label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Ghi chú bổ sung (tùy chọn)"
+              style={{
+                ...inputStyle, height: 68, padding: '8px 12px',
+                resize: 'none', fontFamily: 'inherit'
+              }}
+              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            />
+          </div>
+          {(localError || error) && (
+            <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>
+              {localError || error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          display: 'flex', justifyContent: 'flex-end', gap: 10,
+          padding: '14px 20px', borderTop: '1px solid var(--border)'
+        }}>
+          <button onClick={onClose} style={{
+            height: 38, padding: '0 16px', border: '1px solid var(--border)',
+            borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text)',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer'
+          }}>Hủy</button>
+          <button onClick={submit} disabled={loading} style={{
+            height: 38, padding: '0 16px', border: 'none',
+            borderRadius: 'var(--rad-sm)', background: 'var(--primary)',
+            color: '#fff', fontSize: 13, fontWeight: 600,
+            cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1
+          }}>
+            {loading ? 'Đang xử lý…' : 'Xác nhận cấp phát'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DeptCardPanel({
+  card,
+  isDrop,
+  onDragOver,
+  onDrop,
+}: {
+  card: DeptCard
+  isDrop?: boolean
+  onDragOver?(): void
+  onDrop?(): void
+}) {
   const firstCode = card.requests[0]?.code ?? ''
   const [activeCode, setActiveCode] = useState(firstCode)
   const [page, setPage] = useState(1)
@@ -49,12 +219,19 @@ function DeptCardPanel({ card }: { card: DeptCard }) {
   }
 
   return (
-    <div style={{
-      background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 'var(--rad-lg)', padding: 18,
-      display: 'flex', flexDirection: 'column', gap: 14,
-      height: 430, overflow: 'hidden'
-    }}>
+    <div
+      onDragOver={e => { e.preventDefault(); onDragOver?.() }}
+      onDrop={e => { e.preventDefault(); onDrop?.() }}
+      style={{
+        background: 'var(--surface)',
+        border: `1px solid ${isDrop ? 'var(--primary)' : 'var(--border)'}`,
+        borderRadius: 'var(--rad-lg)', padding: 18,
+        display: 'flex', flexDirection: 'column', gap: 14,
+        height: 430, overflow: 'hidden',
+        boxShadow: isDrop ? '0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent)' : 'none',
+        transition: 'border-color .12s, box-shadow .12s'
+      }}
+    >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
@@ -251,7 +428,26 @@ function DeptCardPanel({ card }: { card: DeptCard }) {
 
 export default function Dashboard() {
   const { data, isLoading, error } = useDashboard()
+  const queryClient = useQueryClient()
   const [lendOpen, setLendOpen] = useState(false)
+  const [dropDept, setDropDept] = useState<string | null>(null)
+  const dragStateRef = useRef<{ devices: AvailableDeviceRow[]; requestId: number | null } | null>(null)
+  const [lendModal, setLendModal] = useState<{
+    devices: AvailableDeviceRow[]
+    dept: string
+    deptId: number
+    requestId: number | null
+  } | null>(null)
+
+  const quickAllocMutation = useMutation({
+    mutationFn: (args: QuickAllocateArgs) => unwrap(api.allocate.quick(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      queryClient.invalidateQueries({ queryKey: ['requests', 'available-devices'] })
+      setLendModal(null)
+    },
+  })
 
   if (isLoading) {
     return (
@@ -272,7 +468,11 @@ export default function Dashboard() {
   if (!data) return null
 
   return (
-    <div style={{ maxWidth: 1240, margin: '0 auto' }}>
+    <div style={{
+      maxWidth: 1240, margin: '0 auto',
+      paddingRight: lendOpen ? 444 : 0,
+      transition: 'padding .2s ease'
+    }}>
       {/* Stat cards */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
@@ -352,10 +552,54 @@ export default function Dashboard() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
             {data.deptCards.map(card => (
-              <DeptCardPanel key={card.dept} card={card} />
+              <DeptCardPanel
+                key={card.dept}
+                card={card}
+                isDrop={dropDept === card.dept}
+                onDragOver={() => setDropDept(card.dept)}
+                onDrop={() => {
+                  setDropDept(null)
+                  if (dragStateRef.current) {
+                    setLendModal({
+                      devices: dragStateRef.current.devices,
+                      dept: card.dept,
+                      deptId: card.deptId,
+                      requestId: dragStateRef.current.requestId,
+                    })
+                    dragStateRef.current = null
+                  }
+                }}
+              />
             ))}
           </div>
         </>
+      )}
+
+      <AllocationDrawer
+        open={lendOpen}
+        onClose={() => setLendOpen(false)}
+        dragStateRef={dragStateRef}
+      />
+
+      {lendModal && (
+        <LendConfirmDialog
+          devices={lendModal.devices}
+          dept={lendModal.dept}
+          deptId={lendModal.deptId}
+          requestId={lendModal.requestId}
+          loading={quickAllocMutation.isPending}
+          error={quickAllocMutation.isError ? (quickAllocMutation.error as Error).message : ''}
+          onClose={() => setLendModal(null)}
+          onConfirm={(borrowerName, notes) =>
+            quickAllocMutation.mutate({
+              deviceSkus: lendModal.devices.map(d => d.sku),
+              departmentId: lendModal.deptId,
+              borrowerName,
+              requestId: lendModal.requestId,
+              notes: notes || null,
+            })
+          }
+        />
       )}
     </div>
   )
