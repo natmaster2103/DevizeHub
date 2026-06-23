@@ -4,6 +4,9 @@ export const CHANNELS = {
   authLogout: 'auth.logout',
   devicesList: 'devices.list',
   devicesGet: 'devices.get',
+  devicesCreate: 'devices.create',
+  devicesUpdate: 'devices.update',
+  devicesChangeStatus: 'devices.changeStatus',
   dashboardSummary: 'dashboard.summary',
   requestsList: 'requests.list',
   requestsGet: 'requests.get',
@@ -44,14 +47,24 @@ export interface DeviceRow {
   sku: string
   name: string
   category: string
+  categoryId: number | null
   status: DeviceStatus
   department: string | null
   holder: string | null
   serialNumber: string | null
 }
 export interface StatusCount { key: 'all' | DeviceStatus; count: number }
-export interface DeviceListArgs { filter: 'all' | DeviceStatus; query: string }
-export interface DeviceListResult { devices: DeviceRow[]; counts: StatusCount[]; total: number }
+export interface DeviceListArgs {
+  filter: 'all' | DeviceStatus
+  query: string
+  page?: number      // 1-based, default 1
+  pageSize?: number  // default 20
+}
+export interface DeviceListResult {
+  devices: DeviceRow[]   // đã slice theo page
+  counts: StatusCount[]  // tính trên toàn bộ devices (không bị filter/query ảnh hưởng)
+  total: number          // tổng sau filter+search, trước slice — dùng tính totalPages
+}
 
 export interface DeviceHistoryEntry {
   type: 'allocate' | 'return' | 'maintenance' | 'create'
@@ -66,6 +79,28 @@ export interface DeviceDetailResult {
   history: DeviceHistoryEntry[]
 }
 export interface DeviceGetArgs { sku: string }
+
+export interface DeviceCreateArgs {
+  sku: string
+  name: string
+  categoryId: number | null
+  serialNumber: string | null
+  notes: string | null
+}
+
+export interface DeviceUpdateArgs {
+  sku: string
+  name: string
+  categoryId: number | null
+  serialNumber: string | null
+  notes: string | null
+}
+
+export interface DeviceChangeStatusArgs {
+  sku: string
+  status: 'available' | 'maintenance' | 'broken' | 'decommissioned'
+  notes: string | null
+}
 
 export interface DeptCardItem {
   allocationId: number
@@ -186,6 +221,9 @@ export interface Api {
   devices: {
     list(args: DeviceListArgs): Promise<ApiResponse<DeviceListResult>>
     get(args: DeviceGetArgs): Promise<ApiResponse<DeviceDetailResult>>
+    create(args: DeviceCreateArgs): Promise<ApiResponse<{ sku: string }>>
+    update(args: DeviceUpdateArgs): Promise<ApiResponse<{ ok: true }>>
+    changeStatus(args: DeviceChangeStatusArgs): Promise<ApiResponse<{ ok: true }>>
   }
   dashboard: {
     summary(): Promise<ApiResponse<DashboardSummary>>
