@@ -117,20 +117,22 @@ export function makeDashboardHandlers(db: AppDb) {
         const group = deptGroups.get(req.departmentId)!
         group.activeCount += activeCount
 
-        // Build items
-        const items: DeptCardItem[] = reqAllocs.map((a) => {
-          const lenderId = lenderByAllocId.get(a.allocId) ?? null
-          const lenderName = lenderId != null ? (userById.get(lenderId) ?? '') : ''
-          return {
-            allocationId: a.allocId,
-            deviceSku: deviceSkuById.get(a.deviceId) ?? '',
-            name: deviceById.get(a.deviceId) ?? '',
-            datetime: fmtDateTime(a.issuedAt),
-            borrower: a.employeeName ?? '',
-            lender: lenderName,
-            returnable: a.returnedAt === null,
-          }
-        })
+        // Build items — only show allocations that have not been returned yet
+        const items: DeptCardItem[] = reqAllocs
+          .filter((a) => a.returnedAt === null)
+          .map((a) => {
+            const lenderId = lenderByAllocId.get(a.allocId) ?? null
+            const lenderName = lenderId != null ? (userById.get(lenderId) ?? '') : ''
+            return {
+              allocationId: a.allocId,
+              deviceSku: deviceSkuById.get(a.deviceId) ?? '',
+              name: deviceById.get(a.deviceId) ?? '',
+              datetime: fmtDateTime(a.issuedAt),
+              borrower: a.employeeName ?? '',
+              lender: lenderName,
+              returnable: true,
+            }
+          })
 
         group.requestCards.push({
           code: req.code ?? '',
