@@ -52,6 +52,7 @@ export interface DeviceRow {
   department: string | null
   holder: string | null
   serialNumber: string | null
+  notes: string | null
 }
 export interface StatusCount { key: 'all' | DeviceStatus; count: number }
 export interface DeviceListArgs {
@@ -74,7 +75,7 @@ export interface DeviceHistoryEntry {
 }
 export interface DeviceInfoField { key: string; value: string; isStatus?: boolean }
 export interface DeviceDetailResult {
-  device: DeviceRow & { notes: string | null }
+  device: DeviceRow
   info: DeviceInfoField[]
   history: DeviceHistoryEntry[]
 }

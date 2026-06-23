@@ -1,4 +1,4 @@
-import { eq, isNull, and, isNotNull } from 'drizzle-orm'
+import { eq, isNull, and } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import {
   devices,
@@ -54,6 +54,7 @@ export function makeDeviceHandlers(db: AppDb) {
           serialNumber: devices.serialNumber,
           categoryId: devices.categoryId,
           categoryName: categories.name,
+          notes: devices.notes,
         })
         .from(devices)
         .leftJoin(categories, eq(devices.categoryId, categories.id))
@@ -91,6 +92,7 @@ export function makeDeviceHandlers(db: AppDb) {
           categoryId: r.categoryId ?? null,
           status: r.status as DeviceStatus,
           serialNumber: r.serialNumber ?? null,
+          notes: r.notes ?? null,
           holder: alloc?.holderName ?? null,
           department: alloc?.deptName ?? null,
         }

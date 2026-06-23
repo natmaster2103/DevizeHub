@@ -125,7 +125,9 @@ describe('devices.changeStatus', () => {
     const h = setup()
     // LAP-0001 is seeded as allocated
     const list = await h.list({ filter: 'allocated', query: '' })
-    if (!list.ok || list.data.devices.length === 0) return
+    expect(list.ok).toBe(true)
+    if (!list.ok) return
+    expect(list.data.devices.length).toBeGreaterThan(0)
     const allocatedSku = list.data.devices[0].sku
     const res = await h.changeStatus({ sku: allocatedSku, status: 'maintenance', notes: null })
     expect(res.ok).toBe(false)

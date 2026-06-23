@@ -340,7 +340,7 @@ export default function Devices() {
             name: formDialog.device.name,
             categoryId: formDialog.device.categoryId,
             serialNumber: formDialog.device.serialNumber,
-            notes: null,
+            notes: formDialog.device.notes,
           } : undefined}
           categories={categories}
           loading={formDialog.mode === 'create' ? createMutation.isPending : updateMutation.isPending}
