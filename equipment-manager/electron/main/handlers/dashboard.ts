@@ -63,8 +63,9 @@ export function makeDashboardHandlers(db: AppDb) {
       const userById = new Map(allUsers.map((u) => [u.id, u.displayName]))
 
       // Fetch device names for items
-      const allDevicesInfo = db.select({ id: devices.id, name: devices.name }).from(devices).all()
+      const allDevicesInfo = db.select({ id: devices.id, name: devices.name, sku: devices.sku }).from(devices).all()
       const deviceById = new Map(allDevicesInfo.map((d) => [d.id, d.name]))
+      const deviceSkuById = new Map(allDevicesInfo.map((d) => [d.id, d.sku]))
 
       // Fetch lender per allocation (issuedBy on allocation)
       const allocWithLender = db
@@ -121,6 +122,8 @@ export function makeDashboardHandlers(db: AppDb) {
           const lenderId = lenderByAllocId.get(a.allocId) ?? null
           const lenderName = lenderId != null ? (userById.get(lenderId) ?? '') : ''
           return {
+            allocationId: a.allocId,
+            deviceSku: deviceSkuById.get(a.deviceId) ?? '',
             name: deviceById.get(a.deviceId) ?? '',
             datetime: fmtDateTime(a.issuedAt),
             borrower: a.employeeName ?? '',

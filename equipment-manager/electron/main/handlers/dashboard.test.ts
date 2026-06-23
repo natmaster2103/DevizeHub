@@ -20,6 +20,11 @@ describe('dashboard.summary', () => {
       expect(res.data.stats.allocated).toBeGreaterThan(0)
       expect(res.data.deptCards.length).toBeGreaterThan(0)
       expect(res.data.deptCards[0].requests.length).toBeGreaterThan(0)
+      // ← thêm:
+      const firstItem = res.data.deptCards[0].requests[0].items[0]
+      expect(typeof firstItem.allocationId).toBe('number')
+      expect(typeof firstItem.deviceSku).toBe('string')
+      expect(firstItem.deviceSku.length).toBeGreaterThan(0)
     }
   })
 })

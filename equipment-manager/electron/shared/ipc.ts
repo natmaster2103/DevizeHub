@@ -67,7 +67,15 @@ export interface DeviceDetailResult {
 }
 export interface DeviceGetArgs { sku: string }
 
-export interface DeptCardItem { name: string; datetime: string; borrower: string; lender: string; returnable: boolean }
+export interface DeptCardItem {
+  allocationId: number
+  deviceSku: string
+  name: string
+  datetime: string
+  borrower: string
+  lender: string
+  returnable: boolean
+}
 export interface DeptCardRequest { code: string; date: string; status: RequestStatus; items: DeptCardItem[] }
 export interface DeptCard { dept: string; deptId: number; count: number; share: number; requests: DeptCardRequest[] }
 export interface DashboardSummary {
