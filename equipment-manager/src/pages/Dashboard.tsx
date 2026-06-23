@@ -357,27 +357,29 @@ function DeptCardPanel({
                 </span>
               </div>
             </div>
-            <button
-              onClick={() => onReturnItem?.(item)}
-              style={{
-                flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
-                height: 30, padding: '0 11px',
-                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
-                background: 'var(--surface)', color: 'var(--text)',
-                fontSize: 12, fontWeight: 600, cursor: 'pointer'
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'var(--primary)'
-                e.currentTarget.style.color = 'var(--primary)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--border)'
-                e.currentTarget.style.color = 'var(--text)'
-              }}
-            >
-              <IconReturn size={14} />
-              <span>Trả về</span>
-            </button>
+            {item.returnable && (
+              <button
+                onClick={() => onReturnItem?.(item)}
+                style={{
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
+                  height: 30, padding: '0 11px',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'var(--surface)', color: 'var(--text)',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--primary)'
+                  e.currentTarget.style.color = 'var(--primary)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                  e.currentTarget.style.color = 'var(--text)'
+                }}
+              >
+                <IconReturn size={14} />
+                <span>Trả về</span>
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -468,6 +470,7 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['devices'] })
+      queryClient.invalidateQueries({ queryKey: ['requests'] })
       setReturnTarget(null)
     },
   })
