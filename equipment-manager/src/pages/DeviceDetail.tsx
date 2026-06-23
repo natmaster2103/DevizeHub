@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { useDevice } from '@/hooks/useDevice'
 import { useAuth } from '@/context/AuthContext'
 import { StatusBadge } from '@/components/StatusBadge'
 import { IconBox, IconBack, IconSwap, IconEdit, IconCheck, IconDown, IconWrench } from '@/lib/icons'
+import { DeviceFormDialog } from '@/components/DeviceFormDialog'
+import { ChangeStatusDialog } from '@/components/ChangeStatusDialog'
+import { api, unwrap } from '@/lib/api'
 import type { DeviceHistoryEntry } from '@shared/ipc'
 
 type HistType = DeviceHistoryEntry['type']
@@ -29,6 +33,35 @@ export default function DeviceDetail() {
   const { sku } = useParams<{ sku: string }>()
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
+  const queryClient = useQueryClient()
+  const [showFormDialog, setShowFormDialog] = useState(false)
+  const [showStatusDialog, setShowStatusDialog] = useState(false)
+
+  const { data: catalogData } = useQuery({
+    queryKey: ['catalog'],
+    queryFn: () => unwrap(api.catalog.list()),
+    enabled: showFormDialog,
+  })
+  const categories = catalogData?.categories ?? []
+
+  const updateMutation = useMutation({
+    mutationFn: (args: Parameters<typeof api.devices.update>[0]) => unwrap(api.devices.update(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', sku] })
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      setShowFormDialog(false)
+    },
+  })
+
+  const changeStatusMutation = useMutation({
+    mutationFn: (args: Parameters<typeof api.devices.changeStatus>[0]) => unwrap(api.devices.changeStatus(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', sku] })
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      setShowStatusDialog(false)
+    },
+  })
+
   const { data, isLoading, error } = useDevice(sku!)
   const [tab, setTab] = useState<Tab>('info')
 
@@ -99,7 +132,7 @@ export default function DeviceDetail() {
         {isAdmin && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={() => { /* no-op M1 */ }}
+              onClick={() => setShowStatusDialog(true)}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 height: 38, padding: '0 14px',
@@ -114,7 +147,7 @@ export default function DeviceDetail() {
               <span>Đổi trạng thái</span>
             </button>
             <button
-              onClick={() => { /* no-op M1 */ }}
+              onClick={() => setShowFormDialog(true)}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 height: 38, padding: '0 14px', border: 'none',
@@ -197,6 +230,36 @@ export default function DeviceDetail() {
             )
           })}
         </div>
+      )}
+
+      {showFormDialog && data && (
+        <DeviceFormDialog
+          mode="edit"
+          initial={{
+            sku: data.device.sku,
+            name: data.device.name,
+            categoryId: data.device.categoryId,
+            serialNumber: data.device.serialNumber,
+            notes: data.device.notes,
+          }}
+          categories={categories}
+          loading={updateMutation.isPending}
+          error={updateMutation.isError ? (updateMutation.error as Error).message : ''}
+          onClose={() => { setShowFormDialog(false); updateMutation.reset() }}
+          onSubmit={args => updateMutation.mutate(args)}
+        />
+      )}
+      {showStatusDialog && data && (
+        <ChangeStatusDialog
+          sku={data.device.sku}
+          deviceName={data.device.name}
+          currentStatus={data.device.status}
+          isAllocated={data.device.status === 'allocated'}
+          loading={changeStatusMutation.isPending}
+          error={changeStatusMutation.isError ? (changeStatusMutation.error as Error).message : ''}
+          onClose={() => { setShowStatusDialog(false); changeStatusMutation.reset() }}
+          onConfirm={args => changeStatusMutation.mutate(args)}
+        />
       )}
     </div>
   )
