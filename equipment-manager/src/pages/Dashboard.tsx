@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDashboard } from '@/hooks/useDashboard'
-import type { DeptCard, DeptCardRequest, DashboardSummary, AvailableDeviceRow, QuickAllocateArgs } from '@shared/ipc'
+import type { DeptCard, DeptCardItem, DeptCardRequest, DashboardSummary, AvailableDeviceRow, QuickAllocateArgs, ReturnDeviceArgs } from '@shared/ipc'
 import {
   IconBox, IconCheck, IconWrench, IconAlert, IconReturn, IconBuilding
 } from '@/lib/icons'
 import { AllocationDrawer } from '@/components/AllocationDrawer'
+import { ReturnDialog } from '@/components/ReturnDialog'
 import { api, unwrap } from '@/lib/api'
 
 const PAGE_SIZE = 6
@@ -196,12 +197,14 @@ function DeptCardPanel({
   onDragOver,
   onDrop,
   onDragLeave,
+  onReturnItem,
 }: {
   card: DeptCard
   isDrop?: boolean
   onDragOver?(): void
   onDrop?(): void
   onDragLeave?(): void
+  onReturnItem?(item: DeptCardItem): void
 }) {
   const firstCode = card.requests[0]?.code ?? ''
   const [activeCode, setActiveCode] = useState(firstCode)
@@ -355,7 +358,7 @@ function DeptCardPanel({
               </div>
             </div>
             <button
-              onClick={() => { /* TODO: wire Return Dialog in Task 7 */ }}
+              onClick={() => onReturnItem?.(item)}
               style={{
                 flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
                 height: 30, padding: '0 11px',
@@ -449,6 +452,23 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['devices'] })
       queryClient.invalidateQueries({ queryKey: ['requests', 'available-devices'] })
       setLendModal(null)
+    },
+  })
+
+  const [returnTarget, setReturnTarget] = useState<{
+    allocationId: number
+    deviceName: string
+    deviceSku: string
+    recipient: string
+    dept: string
+  } | null>(null)
+
+  const returnMutation = useMutation({
+    mutationFn: (args: ReturnDeviceArgs) => unwrap(api.requests.returnDevice(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      setReturnTarget(null)
     },
   })
 
@@ -573,6 +593,13 @@ export default function Dashboard() {
                     dragStateRef.current = null
                   }
                 }}
+                onReturnItem={item => setReturnTarget({
+                  allocationId: item.allocationId,
+                  deviceName: item.name,
+                  deviceSku: item.deviceSku,
+                  recipient: item.borrower,
+                  dept: card.dept,
+                })}
               />
             ))}
           </div>
@@ -584,6 +611,29 @@ export default function Dashboard() {
         onClose={() => setLendOpen(false)}
         dragStateRef={dragStateRef}
       />
+
+      {returnTarget && (
+        <ReturnDialog
+          allocationId={returnTarget.allocationId}
+          deviceName={returnTarget.deviceName}
+          deviceSku={returnTarget.deviceSku}
+          recipient={returnTarget.recipient}
+          contextLabel={`Phòng ban: ${returnTarget.dept}`}
+          onClose={() => { setReturnTarget(null); returnMutation.reset() }}
+          onConfirm={args => returnMutation.mutate(args)}
+          loading={returnMutation.isPending}
+        />
+      )}
+      {returnMutation.isError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          background: '#dc2626', color: '#fff', padding: '12px 18px',
+          borderRadius: 'var(--rad-md)', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,.2)'
+        }}>
+          {(returnMutation.error as Error).message}
+        </div>
+      )}
 
       {lendModal && (
         <LendConfirmDialog
