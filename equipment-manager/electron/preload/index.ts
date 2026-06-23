@@ -9,7 +9,10 @@ const api: Api = {
   },
   devices: {
     list: (args) => ipcRenderer.invoke(CHANNELS.devicesList, args),
-    get: (args) => ipcRenderer.invoke(CHANNELS.devicesGet, args)
+    get: (args) => ipcRenderer.invoke(CHANNELS.devicesGet, args),
+    create: (args) => ipcRenderer.invoke(CHANNELS.devicesCreate, args),
+    update: (args) => ipcRenderer.invoke(CHANNELS.devicesUpdate, args),
+    changeStatus: (args) => ipcRenderer.invoke(CHANNELS.devicesChangeStatus, args),
   },
   dashboard: {
     summary: () => ipcRenderer.invoke(CHANNELS.dashboardSummary)
