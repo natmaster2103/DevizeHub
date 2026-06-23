@@ -4,7 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRequest, useAvailableDevices } from '@/hooks/useRequest'
 import { useAuth } from '@/context/AuthContext'
 import { REQUEST_STATUS_LABELS, requestBadgeStyle } from '@/lib/status'
-import { IconBack, IconReturn, IconPlus, IconSearch } from '@/lib/icons'
+import { IconBack, IconReturn, IconPlus, IconSearch, IconPrint } from '@/lib/icons'
+import { printRequest } from '@/lib/print'
 import { api, unwrap } from '@/lib/api'
 import type { RequestDeviceLine, RequestDetail, ReturnDeviceArgs, AddToRequestArgs } from '@shared/ipc'
 import { ReturnDialog } from '@/components/ReturnDialog'
@@ -362,7 +363,7 @@ export default function RequestDetail() {
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 'var(--rad-lg)', padding: '18px 22px'
       }}>
-        {/* Top row: code + badge + add button */}
+        {/* Top row: code + badge + print/add buttons */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
@@ -380,23 +381,40 @@ export default function RequestDetail() {
               {REQUEST_STATUS_LABELS[data.status]}
             </span>
           </div>
-          {isAdmin && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button
-              onClick={() => setShowAddDialog(true)}
+              onClick={() => printRequest(data)}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
                 height: 38, padding: '0 14px',
-                border: '2px dashed var(--primary)', borderRadius: 'var(--rad-sm)',
-                background: 'none', color: 'var(--primary)',
-                fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                background: 'none', color: 'var(--text)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-soft2, rgba(37,99,235,.06))')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'none')}
             >
-              <IconPlus size={14} />
-              Thêm thiết bị
+              <IconPrint size={14} />
+              In phiếu
             </button>
-          )}
+            {isAdmin && (
+              <button
+                onClick={() => setShowAddDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 14px',
+                  border: '2px dashed var(--primary)', borderRadius: 'var(--rad-sm)',
+                  background: 'none', color: 'var(--primary)',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-soft2, rgba(37,99,235,.06))')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                <IconPlus size={14} />
+                Thêm thiết bị
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Meta grid */}
