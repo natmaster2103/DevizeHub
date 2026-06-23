@@ -27,6 +27,7 @@ function fmtDate(iso: string): string {
 }
 
 function deriveStatus(totalLines: number, activeLines: number): RequestStatus {
+  if (totalLines === 0) return 'pending'
   if (activeLines > 0) return 'allocated'
   return 'completed'
 }

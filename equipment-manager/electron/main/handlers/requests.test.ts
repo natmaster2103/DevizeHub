@@ -48,3 +48,24 @@ describe('requests.create', () => {
     session.current = null
   })
 })
+
+describe('requests.list — status derivation', () => {
+  it('returns pending for a newly created request with no devices', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin' }
+
+    const deptId = db.select({ id: departments.id }).from(departments).all()[0]?.id ?? 1
+    const handlers = makeRequestHandlers(db)
+    await handlers.create({ code: 'NEW-001', departmentId: deptId, createdAt: null, notes: null })
+
+    const res = await handlers.list({ query: 'NEW-001' })
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      const req = res.data.requests.find(r => r.code === 'NEW-001')
+      expect(req).toBeDefined()
+      expect(req?.status).toBe('pending')
+    }
+    session.current = null
+  })
+})

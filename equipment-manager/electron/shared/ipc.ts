@@ -68,7 +68,7 @@ export interface DeviceDetailResult {
 export interface DeviceGetArgs { sku: string }
 
 export interface DeptCardItem { name: string; datetime: string; borrower: string; lender: string; returnable: boolean }
-export interface DeptCardRequest { code: string; date: string; status: 'allocated' | 'completed'; items: DeptCardItem[] }
+export interface DeptCardRequest { code: string; date: string; status: RequestStatus; items: DeptCardItem[] }
 export interface DeptCard { dept: string; deptId: number; count: number; share: number; requests: DeptCardRequest[] }
 export interface DashboardSummary {
   stats: { total: number; allocated: number; maintenance: number; broken: number; decommissioned: number }
@@ -117,7 +117,7 @@ export interface SaveUserArgs { id?: number; username: string; displayName: stri
 export interface ChangePasswordArgs { currentPassword: string; newPassword: string }
 export interface DbInfoResult { path: string; sizeKb: number; lastBackup: string | null }
 
-export type RequestStatus = 'allocated' | 'completed'
+export type RequestStatus = 'pending' | 'allocated' | 'completed'
 
 export interface RequestRow {
   id: number

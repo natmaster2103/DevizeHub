@@ -18,15 +18,19 @@ const COLORS: Record<DeviceStatus, { bg: string; fg: string }> = {
 export function badgeStyle(status: DeviceStatus) { return COLORS[status] }
 
 export function requestStatusLabel(s: RequestStatus): string {
-  return s === 'allocated' ? 'Đang trang bị' : 'Hoàn tất'
+  if (s === 'pending') return 'Chưa cấp phát'
+  if (s === 'allocated') return 'Đang trang bị'
+  return 'Hoàn tất'
 }
 
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
+  pending: 'Chưa cấp phát',
   allocated: 'Đang trang bị',
   completed: 'Hoàn tất',
 }
 
 const REQ_COLORS: Record<RequestStatus, { bg: string; fg: string }> = {
+  pending: { bg: 'rgba(100,116,139,.18)', fg: '#64748b' },
   allocated: { bg: 'rgba(37,99,235,.14)', fg: '#2563eb' },
   completed: { bg: 'rgba(22,163,74,.14)', fg: '#16a34a' },
 }

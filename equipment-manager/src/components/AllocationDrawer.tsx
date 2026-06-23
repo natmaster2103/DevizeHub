@@ -21,7 +21,7 @@ function useAllocatedRequests() {
   return useQuery({
     queryKey: ['requests', ''],
     queryFn: () => unwrap(api.requests.list({ query: '' })),
-    select: d => d.requests.filter(r => r.status === 'allocated'),
+    select: d => d.requests.filter(r => r.status !== 'completed'),
   })
 }
 
