@@ -1,14 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  useReactTable, getCoreRowModel, createColumnHelper,
-  flexRender
+  useReactTable, getCoreRowModel, createColumnHelper, flexRender
 } from '@tanstack/react-table'
 import { useDevices } from '@/hooks/useDevices'
 import { useAuth } from '@/context/AuthContext'
 import { StatusBadge } from '@/components/StatusBadge'
 import { STATUS_LABELS } from '@/lib/status'
 import { IconScan, IconSearch, IconPlus, IconView, IconEdit, IconSwap } from '@/lib/icons'
+import { DeviceFormDialog } from '@/components/DeviceFormDialog'
+import { ChangeStatusDialog } from '@/components/ChangeStatusDialog'
+import { api, unwrap } from '@/lib/api'
 import type { DeviceRow, DeviceStatus } from '@shared/ipc'
 
 const FILTER_KEYS: Array<'all' | DeviceStatus> = [
@@ -25,10 +28,53 @@ const colHelper = createColumnHelper<DeviceRow>()
 export default function Devices() {
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
+  const queryClient = useQueryClient()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | DeviceStatus>('all')
 
-  const { data, isLoading, error } = useDevices(filter, query)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 20
+
+  // Reset về trang 1 khi filter hoặc query thay đổi
+  useEffect(() => { setPage(1) }, [filter, query])
+
+  const { data, isLoading, error } = useDevices(filter, query, page, PAGE_SIZE)
+  const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE)
+
+  const { data: catalogData } = useQuery({
+    queryKey: ['catalog'],
+    queryFn: () => unwrap(api.catalog.list()),
+  })
+  const categories = catalogData?.categories ?? []
+
+  const [formDialog, setFormDialog] = useState<
+    null | { mode: 'create' } | { mode: 'edit'; device: DeviceRow }
+  >(null)
+  const [statusDialog, setStatusDialog] = useState<DeviceRow | null>(null)
+
+  const createMutation = useMutation({
+    mutationFn: (args: Parameters<typeof api.devices.create>[0]) => unwrap(api.devices.create(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      setFormDialog(null)
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: (args: Parameters<typeof api.devices.update>[0]) => unwrap(api.devices.update(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      setFormDialog(null)
+    },
+  })
+
+  const changeStatusMutation = useMutation({
+    mutationFn: (args: Parameters<typeof api.devices.changeStatus>[0]) => unwrap(api.devices.changeStatus(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      setStatusDialog(null)
+    },
+  })
 
   const columns = [
     colHelper.accessor('sku', {
@@ -83,7 +129,7 @@ export default function Devices() {
             <>
               <button
                 title="Sửa"
-                onClick={() => { /* no-op M1 */ }}
+                onClick={() => setFormDialog({ mode: 'edit', device: row.original })}
                 style={{
                   width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
@@ -96,7 +142,7 @@ export default function Devices() {
               </button>
               <button
                 title="Đổi trạng thái"
-                onClick={() => { /* no-op M1 */ }}
+                onClick={() => setStatusDialog(row.original)}
                 style={{
                   width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
@@ -153,7 +199,7 @@ export default function Devices() {
         </div>
         {isAdmin && (
           <button
-            onClick={() => { /* no-op M1 */ }}
+            onClick={() => setFormDialog({ mode: 'create' })}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
               height: 40, padding: '0 16px', border: 'none',
@@ -252,24 +298,77 @@ export default function Devices() {
             padding: '12px 18px', fontSize: 13, color: 'var(--text-muted)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center'
           }}>
-            <span>Hiển thị {data?.devices.length ?? 0} / {data?.total ?? 0} thiết bị</span>
+            <span>
+              Trang {page}/{totalPages || 1} · {data?.total ?? 0} thiết bị
+            </span>
             <div style={{ display: 'flex', gap: 6 }}>
-              <div style={{
-                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', cursor: 'pointer'
-              }}>‹</div>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{
+                  width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'none', cursor: page === 1 ? 'default' : 'pointer',
+                  color: page === 1 ? 'var(--text-muted)' : 'var(--text)',
+                }}
+              >‹</button>
               <div style={{
                 width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: '1px solid var(--primary)', background: 'var(--primary-soft)',
-                color: 'var(--primary)', borderRadius: 'var(--rad-sm)', fontWeight: 600
-              }}>1</div>
-              <div style={{
-                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', cursor: 'pointer'
-              }}>›</div>
+                color: 'var(--primary)', borderRadius: 'var(--rad-sm)', fontWeight: 600,
+                fontSize: 13,
+              }}>{page}</div>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                style={{
+                  width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'none', cursor: page >= totalPages ? 'default' : 'pointer',
+                  color: page >= totalPages ? 'var(--text-muted)' : 'var(--text)',
+                }}
+              >›</button>
             </div>
           </div>
         </div>
+      )}
+      {formDialog && (
+        <DeviceFormDialog
+          mode={formDialog.mode}
+          initial={formDialog.mode === 'edit' ? {
+            sku: formDialog.device.sku,
+            name: formDialog.device.name,
+            categoryId: formDialog.device.categoryId,
+            serialNumber: formDialog.device.serialNumber,
+            notes: null,
+          } : undefined}
+          categories={categories}
+          loading={formDialog.mode === 'create' ? createMutation.isPending : updateMutation.isPending}
+          error={formDialog.mode === 'create'
+            ? (createMutation.isError ? (createMutation.error as Error).message : '')
+            : (updateMutation.isError ? (updateMutation.error as Error).message : '')}
+          onClose={() => {
+            setFormDialog(null)
+            createMutation.reset()
+            updateMutation.reset()
+          }}
+          onSubmit={args => {
+            if (formDialog.mode === 'create') createMutation.mutate(args)
+            else updateMutation.mutate(args)
+          }}
+        />
+      )}
+      {statusDialog && (
+        <ChangeStatusDialog
+          sku={statusDialog.sku}
+          deviceName={statusDialog.name}
+          currentStatus={statusDialog.status}
+          isAllocated={statusDialog.status === 'allocated'}
+          loading={changeStatusMutation.isPending}
+          error={changeStatusMutation.isError ? (changeStatusMutation.error as Error).message : ''}
+          onClose={() => { setStatusDialog(null); changeStatusMutation.reset() }}
+          onConfirm={args => changeStatusMutation.mutate(args)}
+        />
       )}
     </div>
   )
