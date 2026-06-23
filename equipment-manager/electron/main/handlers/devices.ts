@@ -1,4 +1,4 @@
-import { eq, isNull, and } from 'drizzle-orm'
+import { eq, isNull, and, isNotNull } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import {
   devices,
@@ -19,6 +19,9 @@ import type {
   DeviceHistoryEntry,
   DeviceInfoField,
   DeviceStatus,
+  DeviceCreateArgs,
+  DeviceUpdateArgs,
+  DeviceChangeStatusArgs,
 } from '@shared/ipc'
 
 const STATUS_KEYS: Array<'all' | DeviceStatus> = [
@@ -49,6 +52,7 @@ export function makeDeviceHandlers(db: AppDb) {
           name: devices.name,
           status: devices.status,
           serialNumber: devices.serialNumber,
+          categoryId: devices.categoryId,
           categoryName: categories.name,
         })
         .from(devices)
@@ -84,6 +88,7 @@ export function makeDeviceHandlers(db: AppDb) {
           sku: r.sku,
           name: r.name,
           category: r.categoryName ?? '',
+          categoryId: r.categoryId ?? null,
           status: r.status as DeviceStatus,
           serialNumber: r.serialNumber ?? null,
           holder: alloc?.holderName ?? null,
@@ -109,9 +114,14 @@ export function makeDeviceHandlers(db: AppDb) {
         )
       }
 
+      const total = deviceRows.length
+      const page = args.page ?? 1
+      const pageSize = args.pageSize ?? 20
+      const paged = deviceRows.slice((page - 1) * pageSize, page * pageSize)
+
       return {
         ok: true,
-        data: { devices: deviceRows, counts, total: devRows.length },
+        data: { devices: paged, counts, total },
       }
     },
 
@@ -129,6 +139,7 @@ export function makeDeviceHandlers(db: AppDb) {
           serialNumber: devices.serialNumber,
           notes: devices.notes,
           createdAt: devices.createdAt,
+          categoryId: devices.categoryId,
           categoryName: categories.name,
         })
         .from(devices)
@@ -162,6 +173,7 @@ export function makeDeviceHandlers(db: AppDb) {
         sku: deviceRow.sku,
         name: deviceRow.name,
         category: deviceRow.categoryName ?? '',
+        categoryId: deviceRow.categoryId ?? null,
         status: deviceRow.status as DeviceStatus,
         serialNumber: deviceRow.serialNumber ?? null,
         holder: holderName,
@@ -251,6 +263,78 @@ export function makeDeviceHandlers(db: AppDb) {
         ok: true,
         data: { device: deviceRowOut, info, history: historyEntries },
       }
+    },
+
+    async create(args: DeviceCreateArgs): Promise<ApiResponse<{ sku: string }>> {
+      if (!args?.sku?.trim()) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'SKU không được để trống.' } }
+      }
+      if (!args?.name?.trim()) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên thiết bị không được để trống.' } }
+      }
+      const existing = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, args.sku.trim())).all()[0]
+      if (existing) {
+        return { ok: false, error: { code: 'CONFLICT', message: `SKU "${args.sku.trim()}" đã tồn tại.` } }
+      }
+      const now = new Date().toISOString()
+      db.insert(devices).values({
+        sku: args.sku.trim(),
+        name: args.name.trim(),
+        categoryId: args.categoryId ?? null,
+        serialNumber: args.serialNumber?.trim() || null,
+        status: 'available',
+        notes: args.notes?.trim() || null,
+        createdAt: now,
+        updatedAt: now,
+      }).run()
+      return { ok: true, data: { sku: args.sku.trim() } }
+    },
+
+    async update(args: DeviceUpdateArgs): Promise<ApiResponse<{ ok: true }>> {
+      if (!args?.name?.trim()) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên thiết bị không được để trống.' } }
+      }
+      const device = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, args.sku)).all()[0]
+      if (!device) {
+        return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy thiết bị.' } }
+      }
+      db.update(devices)
+        .set({
+          name: args.name.trim(),
+          categoryId: args.categoryId ?? null,
+          serialNumber: args.serialNumber?.trim() || null,
+          notes: args.notes?.trim() || null,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(devices.sku, args.sku))
+        .run()
+      return { ok: true, data: { ok: true } }
+    },
+
+    async changeStatus(args: DeviceChangeStatusArgs): Promise<ApiResponse<{ ok: true }>> {
+      const allowed: string[] = ['available', 'maintenance', 'broken', 'decommissioned']
+      if (!allowed.includes(args.status)) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Không thể đổi sang trạng thái này thủ công.' } }
+      }
+      const device = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, args.sku)).all()[0]
+      if (!device) {
+        return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy thiết bị.' } }
+      }
+      const activeAlloc = db.select({ id: allocations.id })
+        .from(allocations)
+        .where(and(eq(allocations.deviceId, device.id), isNull(allocations.returnedAt)))
+        .all()[0]
+      if (activeAlloc) {
+        return {
+          ok: false,
+          error: { code: 'CONFLICT', message: 'Thiết bị đang được cấp phát. Vui lòng thu hồi trước khi đổi trạng thái.' },
+        }
+      }
+      db.update(devices)
+        .set({ status: args.status, updatedAt: new Date().toISOString() })
+        .where(eq(devices.sku, args.sku))
+        .run()
+      return { ok: true, data: { ok: true } }
     },
   }
 }
