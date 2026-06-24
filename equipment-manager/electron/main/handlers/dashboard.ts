@@ -37,6 +37,7 @@ export function makeDashboardHandlers(db: AppDb) {
           issuedAt: allocations.issuedAt,
           returnedAt: allocations.returnedAt,
           employeeName: employees.name,
+          allocNotes: allocations.notes,
           deptId: allocations.departmentId,
           deptName: departments.name,
         })
@@ -95,26 +96,24 @@ export function makeDashboardHandlers(db: AppDb) {
       }
       const deptGroups = new Map<number, DeptGroup>()
 
+      // Pre-populate a group for every department so each gets a card on the
+      // dashboard, even ones with no active allocations (empty list inside).
+      const allDepts = db.select({ id: departments.id, name: departments.name }).from(departments).all()
+      for (const d of allDepts) {
+        deptGroups.set(d.id, { deptName: d.name, deptId: d.id, activeCount: 0, requestCards: [] })
+      }
+
       for (const req of allRequests) {
         if (req.departmentId == null) continue
         const reqAllocs = requestAllocMap.get(req.id) ?? []
         if (reqAllocs.length === 0) continue
 
-        const deptName = reqAllocs[0]?.deptName ?? ''
         const hasActiveAlloc = reqAllocs.some((a) => a.returnedAt === null)
         const status: 'allocated' | 'completed' = hasActiveAlloc ? 'allocated' : 'completed'
         const activeCount = reqAllocs.filter((a) => a.returnedAt === null).length
 
-        if (!deptGroups.has(req.departmentId)) {
-          deptGroups.set(req.departmentId, {
-            deptName,
-            deptId: req.departmentId,
-            activeCount: 0,
-            requestCards: [],
-          })
-        }
-
-        const group = deptGroups.get(req.departmentId)!
+        const group = deptGroups.get(req.departmentId)
+        if (!group) continue
         group.activeCount += activeCount
 
         // Build items — only show allocations that have not been returned yet
@@ -128,34 +127,68 @@ export function makeDashboardHandlers(db: AppDb) {
               deviceSku: deviceSkuById.get(a.deviceId) ?? '',
               name: deviceById.get(a.deviceId) ?? '',
               datetime: fmtDateTime(a.issuedAt),
-              borrower: a.employeeName ?? '',
+              borrowerName: a.employeeName ?? parseBorrowerFromNotes(a.allocNotes),
               lender: lenderName,
               returnable: true,
             }
           })
 
-        group.requestCards.push({
-          code: req.code ?? '',
-          date: fmtDate(req.createdAt),
-          status,
-          items,
-        })
+        // Chips only show requests that are currently allocated ("đang trang bị")
+        if (status === 'allocated') {
+          group.requestCards.push({
+            code: req.code ?? '',
+            date: fmtDate(req.createdAt),
+            status,
+            items,
+          })
+        }
       }
 
-      // Sort departments by activeCount desc, take top 4
-      const sortedGroups = [...deptGroups.values()].sort((a, b) => b.activeCount - a.activeCount)
-      const topGroups = sortedGroups.slice(0, 4)
+      // Show a card for every department; busiest (most active allocations) first,
+      // then alphabetically so empty departments sort to the end deterministically.
+      const sortedGroups = [...deptGroups.values()]
+        .sort((a, b) => b.activeCount - a.activeCount || a.deptName.localeCompare(b.deptName))
+
+      // Active allocations with no request link → loose ("Cấp phát lẻ") card
+      const looseItems: DeptCardItem[] = allocRows
+        .filter((a) => a.requestId == null && a.returnedAt === null)
+        .map((a) => {
+          const lenderId = lenderByAllocId.get(a.allocId) ?? null
+          const lenderName = lenderId != null ? (userById.get(lenderId) ?? '') : ''
+          return {
+            allocationId: a.allocId,
+            deviceSku: deviceSkuById.get(a.deviceId) ?? '',
+            name: deviceById.get(a.deviceId) ?? '',
+            datetime: fmtDateTime(a.issuedAt),
+            borrowerName: a.employeeName ?? parseBorrowerFromNotes(a.allocNotes),
+            lender: lenderName,
+            returnable: true,
+          }
+        })
 
       // Compute total active allocations across all depts (for share calculation)
-      const deptAllocTotal = sortedGroups.reduce((sum, g) => sum + g.activeCount, 0)
+      const deptAllocTotal =
+        sortedGroups.reduce((sum, g) => sum + g.activeCount, 0) + looseItems.length
 
-      const deptCards: DeptCard[] = topGroups.map((g) => ({
+      const departmentCards: DeptCard[] = sortedGroups.map((g) => ({
         dept: g.deptName,
         deptId: g.deptId,
+        kind: 'department' as const,
         count: g.activeCount,
         share: deptAllocTotal > 0 ? Math.round((g.activeCount / deptAllocTotal) * 100) : 0,
         requests: g.requestCards,
       }))
+
+      const looseCard: DeptCard = {
+        dept: 'Cấp phát lẻ',
+        deptId: null,
+        kind: 'loose',
+        count: looseItems.length,
+        share: deptAllocTotal > 0 ? Math.round((looseItems.length / deptAllocTotal) * 100) : 0,
+        requests: [],
+        looseItems,
+      }
+      const deptCards: DeptCard[] = [...departmentCards, looseCard]
 
       return {
         ok: true,
@@ -167,6 +200,12 @@ export function makeDashboardHandlers(db: AppDb) {
       }
     },
   }
+}
+
+function parseBorrowerFromNotes(notes: string | null): string {
+  if (!notes) return ''
+  const match = notes.match(/^Người mượn: (.+)/)
+  return match ? match[1].split('\n')[0].trim() : ''
 }
 
 function fmtDate(iso: string): string {

@@ -114,7 +114,15 @@ export interface DeptCardItem {
   returnable: boolean
 }
 export interface DeptCardRequest { code: string; date: string; status: RequestStatus; items: DeptCardItem[] }
-export interface DeptCard { dept: string; deptId: number; count: number; share: number; requests: DeptCardRequest[] }
+export interface DeptCard {
+  dept: string
+  deptId: number | null
+  kind: 'department' | 'loose'
+  count: number
+  share: number
+  requests: DeptCardRequest[]
+  looseItems?: DeptCardItem[]
+}
 export interface DashboardSummary {
   stats: { total: number; allocated: number; maintenance: number; broken: number; decommissioned: number }
   deptCards: DeptCard[]
