@@ -117,9 +117,6 @@ export function makeAllocateHandlers(db: AppDb) {
       if (!Array.isArray(args?.deviceSkus) || args.deviceSkus.length === 0) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Chưa chọn thiết bị.' } }
       }
-      if (!args.departmentId) {
-        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Thiếu thông tin phòng ban.' } }
-      }
       if (!args.borrowerName?.trim()) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Vui lòng nhập tên người mượn.' } }
       }
@@ -150,7 +147,7 @@ export function makeAllocateHandlers(db: AppDb) {
             requestId: args.requestId ?? null,
             deviceId: dev.id,
             employeeId: null,
-            departmentId: args.departmentId,
+            departmentId: args.departmentId ?? null,
             issuedBy: session.current?.id ?? null,
             issuedAt: now,
             notes: notesStr,

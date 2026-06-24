@@ -53,6 +53,7 @@ export interface DeviceRow {
   holder: string | null
   serialNumber: string | null
   notes: string | null
+  activeAllocationId: number | null  // id of the active (not-yet-returned) allocation, for recall
 }
 export interface StatusCount { key: 'all' | DeviceStatus; count: number }
 export interface DeviceListArgs {
@@ -108,7 +109,7 @@ export interface DeptCardItem {
   deviceSku: string
   name: string
   datetime: string
-  borrower: string
+  borrowerName: string
   lender: string
   returnable: boolean
 }
@@ -149,7 +150,7 @@ export interface AllocateFormData {
 
 export interface QuickAllocateArgs {
   deviceSkus: string[]
-  departmentId: number
+  departmentId: number | null
   borrowerName: string
   requestId: number | null
   notes: string | null
