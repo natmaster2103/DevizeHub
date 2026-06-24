@@ -210,10 +210,12 @@ function DeptCardPanel({
   const [activeCode, setActiveCode] = useState(firstCode)
   const [page, setPage] = useState(1)
 
-  const req: DeptCardRequest | undefined =
-    card.requests.find(r => r.code === activeCode) ?? card.requests[0]
+  const isLoose = card.kind === 'loose'
 
-  const items = req?.items ?? []
+  const req: DeptCardRequest | undefined =
+    isLoose ? undefined : (card.requests.find(r => r.code === activeCode) ?? card.requests[0])
+
+  const items = isLoose ? (card.looseItems ?? []) : (req?.items ?? [])
   const totalPages = Math.ceil(items.length / PAGE_SIZE)
   const pageItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const hasPager = items.length > PAGE_SIZE
@@ -253,7 +255,7 @@ function DeptCardPanel({
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
           }}>{card.dept}</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
-            {card.share}% tổng cấp phát
+            {isLoose ? 'Cấp phát không qua phiếu' : `${card.share}% tổng cấp phát`}
           </div>
         </div>
         <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-.02em', lineHeight: 1 }}>
@@ -261,7 +263,7 @@ function DeptCardPanel({
         </div>
       </div>
 
-      {card.requests.length === 0 ? (
+      {!isLoose && card.requests.length === 0 ? (
         /* Empty department — keep the card, hide the device list */
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
@@ -278,37 +280,41 @@ function DeptCardPanel({
       ) : (
         <>
       {/* Chips label */}
-      <div style={{
-        fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
-        textTransform: 'uppercase', letterSpacing: '.03em'
-      }}>{`Phiếu đề nghị (${String(card.requests.length).padStart(2, '0')})`}</div>
+      {!isLoose && (
+        <div style={{
+          fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
+          textTransform: 'uppercase', letterSpacing: '.03em'
+        }}>{`Phiếu đề nghị (${String(card.requests.length).padStart(2, '0')})`}</div>
+      )}
 
       {/* Request chips */}
-      <div style={{
-        display: 'flex', flexWrap: 'nowrap', gap: 6,
-        overflowX: 'auto', paddingBottom: 2
-      }}>
-        {card.requests.map(r => {
-          const isActive = r.code === activeCode
-          return (
-            <div
-              key={r.code}
-              onClick={() => switchChip(r.code)}
-              style={{
-                flexShrink: 0, padding: '4px 10px', borderRadius: 999,
-                fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                fontFamily: "'Consolas', monospace",
-                background: isActive ? 'var(--primary)' : 'var(--surface-2)',
-                color: isActive ? '#fff' : 'var(--text-muted)',
-                border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {r.code}
-            </div>
-          )
-        })}
-      </div>
+      {!isLoose && (
+        <div style={{
+          display: 'flex', flexWrap: 'nowrap', gap: 6,
+          overflowX: 'auto', paddingBottom: 2
+        }}>
+          {card.requests.map(r => {
+            const isActive = r.code === activeCode
+            return (
+              <div
+                key={r.code}
+                onClick={() => switchChip(r.code)}
+                style={{
+                  flexShrink: 0, padding: '4px 10px', borderRadius: 999,
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  fontFamily: "'Consolas', monospace",
+                  background: isActive ? 'var(--primary)' : 'var(--surface-2)',
+                  color: isActive ? '#fff' : 'var(--text-muted)',
+                  border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {r.code}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Meta line */}
       {req && (
@@ -343,7 +349,7 @@ function DeptCardPanel({
               <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
               <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
             </svg>
-            <span style={{ fontSize: 13 }}>Không có thiết bị được cấp phát</span>
+            <span style={{ fontSize: 13 }}>{isLoose ? 'Chưa có thiết bị cấp phát lẻ' : 'Không có thiết bị được cấp phát'}</span>
           </div>
         )}
         {pageItems.map((item, idx) => (
@@ -595,34 +601,43 @@ export default function Dashboard() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
-            {data.deptCards.map(card => (
-              <DeptCardPanel
-                key={card.dept}
-                card={card}
-                isDrop={dropDept === card.dept}
-                onDragOver={() => setDropDept(card.dept)}
-                onDragLeave={() => setDropDept(null)}
-                onDrop={() => {
-                  setDropDept(null)
-                  if (dragStateRef.current) {
+            {data.deptCards.map(card => {
+              const validDrop = () => {
+                const reqId = dragStateRef.current?.requestId ?? null
+                return card.kind === 'loose' ? reqId == null : reqId != null
+              }
+              return (
+                <DeptCardPanel
+                  key={card.dept}
+                  card={card}
+                  isDrop={dropDept === card.dept}
+                  onDragOver={() => setDropDept(validDrop() ? card.dept : null)}
+                  onDragLeave={() => setDropDept(null)}
+                  onDrop={() => {
+                    setDropDept(null)
+                    const drag = dragStateRef.current
+                    dragStateRef.current = null
+                    if (!drag) return
+                    const reqId = drag.requestId ?? null
+                    const ok = card.kind === 'loose' ? reqId == null : reqId != null
+                    if (!ok) return
                     setLendModal({
-                      devices: dragStateRef.current.devices,
+                      devices: drag.devices,
                       dept: card.dept,
                       deptId: card.deptId,
-                      requestId: dragStateRef.current.requestId,
+                      requestId: reqId,
                     })
-                    dragStateRef.current = null
-                  }
-                }}
-                onReturnItem={item => setReturnTarget({
-                  allocationId: item.allocationId,
-                  deviceName: item.name,
-                  deviceSku: item.deviceSku,
-                  recipient: item.borrowerName,
-                  dept: card.dept,
-                })}
-              />
-            ))}
+                  }}
+                  onReturnItem={item => setReturnTarget({
+                    allocationId: item.allocationId,
+                    deviceName: item.name,
+                    deviceSku: item.deviceSku,
+                    recipient: item.borrowerName,
+                    dept: card.dept,
+                  })}
+                />
+              )
+            })}
           </div>
         </>
       )}
