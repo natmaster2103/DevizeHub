@@ -63,6 +63,7 @@ export function makeDeviceHandlers(db: AppDb) {
       // Fetch active allocations (returnedAt IS NULL) with employee + department
       const activeAllocs = db
         .select({
+          allocationId: allocations.id,
           deviceId: allocations.deviceId,
           holderName: employees.name,
           deptName: departments.name,
@@ -95,6 +96,7 @@ export function makeDeviceHandlers(db: AppDb) {
           notes: r.notes ?? null,
           holder: alloc?.holderName ?? null,
           department: alloc?.deptName ?? null,
+          activeAllocationId: alloc?.allocationId ?? null,
         }
       })
 
@@ -159,6 +161,7 @@ export function makeDeviceHandlers(db: AppDb) {
       // Active allocation (returnedAt IS NULL)
       const activeAlloc = db
         .select({
+          allocationId: allocations.id,
           holderName: employees.name,
           deptName: departments.name,
         })
@@ -181,6 +184,7 @@ export function makeDeviceHandlers(db: AppDb) {
         holder: holderName,
         department: deptName,
         notes: deviceRow.notes ?? null,
+        activeAllocationId: activeAlloc?.allocationId ?? null,
       }
 
       // Build info fields

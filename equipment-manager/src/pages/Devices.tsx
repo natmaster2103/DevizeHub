@@ -8,11 +8,12 @@ import { useDevices } from '@/hooks/useDevices'
 import { useAuth } from '@/context/AuthContext'
 import { StatusBadge } from '@/components/StatusBadge'
 import { STATUS_LABELS } from '@/lib/status'
-import { IconScan, IconSearch, IconPlus, IconView, IconEdit, IconSwap } from '@/lib/icons'
+import { IconScan, IconSearch, IconPlus, IconView, IconEdit, IconSwap, IconReturn } from '@/lib/icons'
 import { DeviceFormDialog } from '@/components/DeviceFormDialog'
 import { ChangeStatusDialog } from '@/components/ChangeStatusDialog'
+import { ReturnDialog } from '@/components/ReturnDialog'
 import { api, unwrap } from '@/lib/api'
-import type { DeviceRow, DeviceStatus } from '@shared/ipc'
+import type { DeviceRow, DeviceStatus, ReturnDeviceArgs } from '@shared/ipc'
 
 const FILTER_KEYS: Array<'all' | DeviceStatus> = [
   'all', 'available', 'allocated', 'maintenance', 'broken', 'decommissioned'
@@ -51,6 +52,7 @@ export default function Devices() {
     null | { mode: 'create' } | { mode: 'edit'; device: DeviceRow }
   >(null)
   const [statusDialog, setStatusDialog] = useState<DeviceRow | null>(null)
+  const [returnDialog, setReturnDialog] = useState<DeviceRow | null>(null)
 
   const createMutation = useMutation({
     mutationFn: (args: Parameters<typeof api.devices.create>[0]) => unwrap(api.devices.create(args)),
@@ -73,6 +75,16 @@ export default function Devices() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] })
       setStatusDialog(null)
+    },
+  })
+
+  const returnMutation = useMutation({
+    mutationFn: (args: ReturnDeviceArgs) => unwrap(api.requests.returnDevice(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['requests'] })
+      setReturnDialog(null)
     },
   })
 
@@ -125,6 +137,21 @@ export default function Devices() {
           >
             <IconView size={15} />
           </button>
+          {isAdmin && row.original.status === 'allocated' && row.original.activeAllocationId != null && (
+            <button
+              title="Thu hồi"
+              onClick={() => setReturnDialog(row.original)}
+              style={{
+                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                cursor: 'pointer', color: 'var(--text-muted)', background: 'none'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+            >
+              <IconReturn size={15} />
+            </button>
+          )}
           {isAdmin && (
             <>
               <button
@@ -369,6 +396,28 @@ export default function Devices() {
           onClose={() => { setStatusDialog(null); changeStatusMutation.reset() }}
           onConfirm={args => changeStatusMutation.mutate(args)}
         />
+      )}
+      {returnDialog && returnDialog.activeAllocationId != null && (
+        <ReturnDialog
+          allocationId={returnDialog.activeAllocationId}
+          deviceName={returnDialog.name}
+          deviceSku={returnDialog.sku}
+          recipient={returnDialog.holder ?? '—'}
+          contextLabel={`Phòng ban: ${returnDialog.department ?? '—'}`}
+          onClose={() => { setReturnDialog(null); returnMutation.reset() }}
+          onConfirm={args => returnMutation.mutate(args)}
+          loading={returnMutation.isPending}
+        />
+      )}
+      {returnMutation.isError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          background: '#dc2626', color: '#fff', padding: '12px 18px',
+          borderRadius: 'var(--rad-md)', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,.2)'
+        }}>
+          {(returnMutation.error as Error).message}
+        </div>
       )}
     </div>
   )

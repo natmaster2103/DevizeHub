@@ -48,7 +48,7 @@ function LendConfirmDialog({
 }: {
   devices: AvailableDeviceRow[]
   dept: string
-  deptId: number
+  deptId: number | null
   requestId: number | null
   loading: boolean
   error: string
@@ -261,6 +261,22 @@ function DeptCardPanel({
         </div>
       </div>
 
+      {card.requests.length === 0 ? (
+        /* Empty department — keep the card, hide the device list */
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 10,
+          color: 'var(--text-muted)', padding: '24px 0'
+        }}>
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+          </svg>
+          <span style={{ fontSize: 13 }}>Không có thiết bị đang trang bị</span>
+        </div>
+      ) : (
+        <>
       {/* Chips label */}
       <div style={{
         fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
@@ -350,7 +366,7 @@ function DeptCardPanel({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12 }}>
                 <span style={{ color: 'var(--text-muted)' }}>
-                  Mượn: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{item.borrower}</span>
+                  Mượn: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{item.borrowerName}</span>
                 </span>
                 <span style={{ color: 'var(--text-muted)' }}>
                   Cấp: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{item.lender}</span>
@@ -430,6 +446,8 @@ function DeptCardPanel({
           </div>
         </div>
       )}
+        </>
+      )}
     </div>
   )
 }
@@ -443,7 +461,7 @@ export default function Dashboard() {
   const [lendModal, setLendModal] = useState<{
     devices: AvailableDeviceRow[]
     dept: string
-    deptId: number
+    deptId: number | null
     requestId: number | null
   } | null>(null)
 
@@ -555,7 +573,7 @@ export default function Dashboard() {
                 Thiết bị đang trang bị theo phòng ban
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                {data.deptAllocTotal} thiết bị đang được cấp phát · top {data.deptCards.length} phòng ban
+                {data.deptAllocTotal} thiết bị đang được cấp phát · {data.deptCards.length} phòng ban
               </div>
             </div>
             <button
@@ -600,7 +618,7 @@ export default function Dashboard() {
                   allocationId: item.allocationId,
                   deviceName: item.name,
                   deviceSku: item.deviceSku,
-                  recipient: item.borrower,
+                  recipient: item.borrowerName,
                   dept: card.dept,
                 })}
               />

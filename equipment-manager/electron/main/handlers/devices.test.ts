@@ -135,6 +135,42 @@ describe('devices.changeStatus', () => {
   })
 })
 
+describe('devices.list — activeAllocationId', () => {
+  it('exposes activeAllocationId for an allocated device and null for one without an active allocation', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: '' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const allocated = res.data.devices.find((d) => d.sku === 'LAP-0012')  // active in DX-301
+    const free = res.data.devices.find((d) => d.sku === 'LAP-0024')       // never allocated
+    expect(allocated).toBeDefined()
+    expect(free).toBeDefined()
+    expect(typeof allocated!.activeAllocationId).toBe('number')
+    expect(free!.activeAllocationId).toBeNull()
+  })
+})
+
+describe('devices.get — activeAllocationId', () => {
+  it('exposes the active allocationId for an allocated device', async () => {
+    const h = setup()
+    // LAP-0012 is seeded as allocated under the active request DX-301
+    const res = await h.get({ sku: 'LAP-0012' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.data.device.status).toBe('allocated')
+    expect(typeof res.data.device.activeAllocationId).toBe('number')
+  })
+
+  it('returns null activeAllocationId for a device with no active allocation', async () => {
+    const h = setup()
+    // LAP-0024 (MacBook Air M2) is seeded available and never allocated
+    const res = await h.get({ sku: 'LAP-0024' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.data.device.activeAllocationId).toBeNull()
+  })
+})
+
 describe('devices.list — pagination', () => {
   it('returns first page of 5 when pageSize=5', async () => {
     const h = setup()

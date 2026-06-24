@@ -4,11 +4,12 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { useDevice } from '@/hooks/useDevice'
 import { useAuth } from '@/context/AuthContext'
 import { StatusBadge } from '@/components/StatusBadge'
-import { IconBox, IconBack, IconSwap, IconEdit, IconCheck, IconDown, IconWrench } from '@/lib/icons'
+import { IconBox, IconBack, IconSwap, IconEdit, IconCheck, IconDown, IconWrench, IconReturn } from '@/lib/icons'
 import { DeviceFormDialog } from '@/components/DeviceFormDialog'
 import { ChangeStatusDialog } from '@/components/ChangeStatusDialog'
+import { ReturnDialog } from '@/components/ReturnDialog'
 import { api, unwrap } from '@/lib/api'
-import type { DeviceHistoryEntry } from '@shared/ipc'
+import type { DeviceHistoryEntry, ReturnDeviceArgs } from '@shared/ipc'
 
 type HistType = DeviceHistoryEntry['type']
 
@@ -36,6 +37,7 @@ export default function DeviceDetail() {
   const queryClient = useQueryClient()
   const [showFormDialog, setShowFormDialog] = useState(false)
   const [showStatusDialog, setShowStatusDialog] = useState(false)
+  const [showReturnDialog, setShowReturnDialog] = useState(false)
 
   const { data: catalogData } = useQuery({
     queryKey: ['catalog'],
@@ -59,6 +61,17 @@ export default function DeviceDetail() {
       queryClient.invalidateQueries({ queryKey: ['device', sku] })
       queryClient.invalidateQueries({ queryKey: ['devices'] })
       setShowStatusDialog(false)
+    },
+  })
+
+  const returnMutation = useMutation({
+    mutationFn: (args: ReturnDeviceArgs) => unwrap(api.requests.returnDevice(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', sku] })
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['requests'] })
+      setShowReturnDialog(false)
     },
   })
 
@@ -131,6 +144,23 @@ export default function DeviceDetail() {
 
         {isAdmin && (
           <div style={{ display: 'flex', gap: 8 }}>
+            {device.status === 'allocated' && device.activeAllocationId != null && (
+              <button
+                onClick={() => setShowReturnDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  height: 38, padding: '0 14px',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-md)',
+                  background: 'var(--surface)', color: 'var(--text)',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+              >
+                <IconReturn size={15} />
+                <span>Thu hồi</span>
+              </button>
+            )}
             <button
               onClick={() => setShowStatusDialog(true)}
               style={{
@@ -260,6 +290,28 @@ export default function DeviceDetail() {
           onClose={() => { setShowStatusDialog(false); changeStatusMutation.reset() }}
           onConfirm={args => changeStatusMutation.mutate(args)}
         />
+      )}
+      {showReturnDialog && data && data.device.activeAllocationId != null && (
+        <ReturnDialog
+          allocationId={data.device.activeAllocationId}
+          deviceName={data.device.name}
+          deviceSku={data.device.sku}
+          recipient={data.device.holder ?? '—'}
+          contextLabel={`Phòng ban: ${data.device.department ?? '—'}`}
+          onClose={() => { setShowReturnDialog(false); returnMutation.reset() }}
+          onConfirm={args => returnMutation.mutate(args)}
+          loading={returnMutation.isPending}
+        />
+      )}
+      {returnMutation.isError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          background: '#dc2626', color: '#fff', padding: '12px 18px',
+          borderRadius: 'var(--rad-md)', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,.2)'
+        }}>
+          {(returnMutation.error as Error).message}
+        </div>
       )}
     </div>
   )
