@@ -30,6 +30,7 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.devicesCreate, (_e, args) => auth_guard(() => devicesH.create(args)))
   ipcMain.handle(CHANNELS.devicesUpdate, (_e, args) => auth_guard(() => devicesH.update(args)))
   ipcMain.handle(CHANNELS.devicesChangeStatus, (_e, args) => auth_guard(() => devicesH.changeStatus(args)))
+  ipcMain.handle(CHANNELS.devicesDelete, (_e, args) => auth_guard(() => devicesH.delete(args)))
   ipcMain.handle(CHANNELS.dashboardSummary, () => auth_guard(() => dashboard.summary()))
   ipcMain.handle(CHANNELS.requestsList, (_e, args) => auth_guard(() => requestsH.list(args)))
   ipcMain.handle(CHANNELS.requestsGet, (_e, args) => auth_guard(() => requestsH.get(args)))

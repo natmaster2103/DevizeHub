@@ -22,6 +22,7 @@ import type {
   DeviceCreateArgs,
   DeviceUpdateArgs,
   DeviceChangeStatusArgs,
+  DeviceDeleteArgs,
 } from '@shared/ipc'
 
 const STATUS_KEYS: Array<'all' | DeviceStatus> = [
@@ -340,6 +341,29 @@ export function makeDeviceHandlers(db: AppDb) {
         .set({ status: args.status, updatedAt: new Date().toISOString() })
         .where(eq(devices.sku, args.sku))
         .run()
+      return { ok: true, data: { ok: true } }
+    },
+
+    async delete(args: DeviceDeleteArgs): Promise<ApiResponse<{ ok: true }>> {
+      const device = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, args.sku)).all()[0]
+      if (!device) {
+        return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy thiết bị.' } }
+      }
+      const activeAlloc = db.select({ id: allocations.id })
+        .from(allocations)
+        .where(and(eq(allocations.deviceId, device.id), isNull(allocations.returnedAt)))
+        .all()[0]
+      if (activeAlloc) {
+        return {
+          ok: false,
+          error: { code: 'CONFLICT', message: 'Thiết bị đang được cấp phát. Vui lòng thu hồi trước khi xoá.' },
+        }
+      }
+      db.transaction((tx) => {
+        tx.delete(maintenanceLogs).where(eq(maintenanceLogs.deviceId, device.id)).run()
+        tx.delete(allocations).where(eq(allocations.deviceId, device.id)).run()
+        tx.delete(devices).where(eq(devices.id, device.id)).run()
+      })
       return { ok: true, data: { ok: true } }
     },
   }

@@ -13,6 +13,7 @@ const api: Api = {
     create: (args) => ipcRenderer.invoke(CHANNELS.devicesCreate, args),
     update: (args) => ipcRenderer.invoke(CHANNELS.devicesUpdate, args),
     changeStatus: (args) => ipcRenderer.invoke(CHANNELS.devicesChangeStatus, args),
+    delete: (args) => ipcRenderer.invoke(CHANNELS.devicesDelete, args),
   },
   dashboard: {
     summary: () => ipcRenderer.invoke(CHANNELS.dashboardSummary)

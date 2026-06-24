@@ -7,6 +7,7 @@ export const CHANNELS = {
   devicesCreate: 'devices.create',
   devicesUpdate: 'devices.update',
   devicesChangeStatus: 'devices.changeStatus',
+  devicesDelete: 'devices.delete',
   dashboardSummary: 'dashboard.summary',
   requestsList: 'requests.list',
   requestsGet: 'requests.get',
@@ -103,6 +104,8 @@ export interface DeviceChangeStatusArgs {
   status: 'available' | 'maintenance' | 'broken' | 'decommissioned'
   notes: string | null
 }
+
+export interface DeviceDeleteArgs { sku: string }
 
 export interface DeptCardItem {
   allocationId: number
@@ -234,6 +237,7 @@ export interface Api {
     create(args: DeviceCreateArgs): Promise<ApiResponse<{ sku: string }>>
     update(args: DeviceUpdateArgs): Promise<ApiResponse<{ ok: true }>>
     changeStatus(args: DeviceChangeStatusArgs): Promise<ApiResponse<{ ok: true }>>
+    delete(args: DeviceDeleteArgs): Promise<ApiResponse<{ ok: true }>>
   }
   dashboard: {
     summary(): Promise<ApiResponse<DashboardSummary>>

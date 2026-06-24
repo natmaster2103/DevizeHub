@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest'
+import { eq } from 'drizzle-orm'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
+import { devices, allocations } from '../db/schema'
 import { makeDeviceHandlers } from './devices'
+import { makeAllocateHandlers } from './allocate'
 
 function setup() {
   const { db } = createDb(':memory:')
@@ -196,5 +199,60 @@ describe('devices.list — pagination', () => {
       const all = res.data.counts.find(c => c.key === 'all')
       expect(all?.count).toBe(12)
     }
+  })
+})
+
+describe('devices.delete', () => {
+  it('deletes a device that has never been allocated', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+
+    // PRJ-0003 (Epson) is 'Trong kho' and never allocated in seed
+    const res = await h.delete({ sku: 'PRJ-0003' })
+    expect(res.ok).toBe(true)
+
+    const gone = db.select().from(devices).where(eq(devices.sku, 'PRJ-0003')).all()
+    expect(gone.length).toBe(0)
+  })
+
+  it('blocks deletion when the device is currently allocated', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+    const alloc = makeAllocateHandlers(db)
+
+    // LAP-0024 available → allocate it loosely so it has an active allocation
+    await alloc.quickAllocate({
+      deviceSkus: ['LAP-0024'], departmentId: null,
+      borrowerName: 'X', requestId: null, notes: null,
+    })
+
+    const res = await h.delete({ sku: 'LAP-0024' })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('CONFLICT')
+
+    // Still present
+    const still = db.select().from(devices).where(eq(devices.sku, 'LAP-0024')).all()
+    expect(still.length).toBe(1)
+  })
+
+  it('cascade-deletes returned allocation history with the device', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+
+    // NET-0002 (TP-Link Switch) belongs to DX-298 ('Hoàn tất' → allocation has returnedAt set),
+    // so it has history but NO active allocation → deletion is allowed and cascades the history.
+    const dev = db.select({ id: devices.id })
+      .from(devices).where(eq(devices.sku, 'NET-0002')).get()
+    expect(dev).toBeDefined()
+
+    const res = await h.delete({ sku: 'NET-0002' })
+    expect(res.ok).toBe(true)
+
+    const allocsLeft = db.select().from(allocations)
+      .where(eq(allocations.deviceId, dev!.id)).all()
+    expect(allocsLeft.length).toBe(0)
   })
 })
