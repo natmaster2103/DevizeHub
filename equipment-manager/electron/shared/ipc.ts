@@ -25,6 +25,8 @@ export const CHANNELS = {
   catalogDeleteDepartment: 'catalog.deleteDepartment',
   catalogSaveEmployee: 'catalog.saveEmployee',
   catalogDeleteEmployee: 'catalog.deleteEmployee',
+  catalogSaveGroup: 'catalog.saveGroup',
+  catalogDeleteGroup: 'catalog.deleteGroup',
   settingsListUsers: 'settings.listUsers',
   settingsSaveUser: 'settings.saveUser',
   settingsChangePassword: 'settings.changePassword',
@@ -55,6 +57,8 @@ export interface DeviceRow {
   serialNumber: string | null
   notes: string | null
   activeAllocationId: number | null  // id of the active (not-yet-returned) allocation, for recall
+  group: string | null
+  groupId: number | null
 }
 export interface StatusCount { key: 'all' | DeviceStatus; count: number }
 export interface DeviceListArgs {
@@ -62,6 +66,7 @@ export interface DeviceListArgs {
   query: string
   page?: number      // 1-based, default 1
   pageSize?: number  // default 20
+  categoryId?: number | null
 }
 export interface DeviceListResult {
   devices: DeviceRow[]   // đã slice theo page
@@ -89,6 +94,7 @@ export interface DeviceCreateArgs {
   categoryId: number | null
   serialNumber: string | null
   notes: string | null
+  groupId: number | null
 }
 
 export interface DeviceUpdateArgs {
@@ -97,6 +103,7 @@ export interface DeviceUpdateArgs {
   categoryId: number | null
   serialNumber: string | null
   notes: string | null
+  groupId: number | null
 }
 
 export interface DeviceChangeStatusArgs {
@@ -136,10 +143,17 @@ export interface DashboardSummary {
 export interface CategoryRow { id: number; name: string; minStock: number }
 export interface DepartmentRow { id: number; name: string }
 export interface EmployeeRow { id: number; name: string; employeeCode: string; departmentId: number | null; departmentName: string }
-export interface CatalogListResult { categories: CategoryRow[]; departments: DepartmentRow[]; employees: EmployeeRow[] }
+export interface GroupRow { id: number; name: string; categoryId: number; categoryName: string }
+export interface CatalogListResult {
+  categories: CategoryRow[]
+  departments: DepartmentRow[]
+  employees: EmployeeRow[]
+  groups: GroupRow[]
+}
 export interface SaveCategoryArgs { id?: number; name: string; minStock: number }
 export interface SaveDepartmentArgs { id?: number; name: string }
 export interface SaveEmployeeArgs { id?: number; name: string; employeeCode: string; departmentId: number | null }
+export interface SaveGroupArgs { id?: number; name: string; categoryId: number }
 export interface DeleteEntityArgs { id: number }
 
 // ── Allocate ─────────────────────────────────────────────────────────────────
@@ -263,6 +277,8 @@ export interface Api {
     deleteDepartment(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>>
     saveEmployee(args: SaveEmployeeArgs): Promise<ApiResponse<EmployeeRow>>
     deleteEmployee(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>>
+    saveGroup(args: SaveGroupArgs): Promise<ApiResponse<{ ok: true }>>
+    deleteGroup(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>>
   }
   settings: {
     listUsers(): Promise<ApiResponse<AppUserRow[]>>
