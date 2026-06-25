@@ -6,6 +6,7 @@ import { seedIfEmpty } from '../db/seed'
 import { devices, allocations } from '../db/schema'
 import { makeDeviceHandlers } from './devices'
 import { makeAllocateHandlers } from './allocate'
+import { makeCatalogHandlers } from './catalog'
 
 function setup() {
   const { db } = createDb(':memory:')
@@ -70,6 +71,7 @@ describe('devices.create', () => {
       categoryId: null,
       serialNumber: null,
       notes: null,
+      groupId: null,
     })
     expect(res.ok).toBe(true)
     if (res.ok) expect(res.data.sku).toBe('NEW-001')
@@ -77,8 +79,8 @@ describe('devices.create', () => {
 
   it('returns CONFLICT when SKU already exists', async () => {
     const h = setup()
-    await h.create({ sku: 'DUP-001', name: 'A', categoryId: null, serialNumber: null, notes: null })
-    const res = await h.create({ sku: 'DUP-001', name: 'B', categoryId: null, serialNumber: null, notes: null })
+    await h.create({ sku: 'DUP-001', name: 'A', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    const res = await h.create({ sku: 'DUP-001', name: 'B', categoryId: null, serialNumber: null, notes: null, groupId: null })
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.error.code).toBe('CONFLICT')
   })
@@ -87,8 +89,8 @@ describe('devices.create', () => {
 describe('devices.update', () => {
   it('updates name and notes of an existing device', async () => {
     const h = setup()
-    await h.create({ sku: 'UPD-001', name: 'Old Name', categoryId: null, serialNumber: null, notes: null })
-    const res = await h.update({ sku: 'UPD-001', name: 'New Name', categoryId: null, serialNumber: 'SN-99', notes: 'updated' })
+    await h.create({ sku: 'UPD-001', name: 'Old Name', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    const res = await h.update({ sku: 'UPD-001', name: 'New Name', categoryId: null, serialNumber: 'SN-99', notes: 'updated', groupId: null })
     expect(res.ok).toBe(true)
     const detail = await h.get({ sku: 'UPD-001' })
     if (detail.ok) {
@@ -99,7 +101,7 @@ describe('devices.update', () => {
 
   it('returns NOT_FOUND for unknown sku', async () => {
     const h = setup()
-    const res = await h.update({ sku: 'NOPE', name: 'X', categoryId: null, serialNumber: null, notes: null })
+    const res = await h.update({ sku: 'NOPE', name: 'X', categoryId: null, serialNumber: null, notes: null, groupId: null })
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.error.code).toBe('NOT_FOUND')
   })
@@ -108,7 +110,7 @@ describe('devices.update', () => {
 describe('devices.changeStatus', () => {
   it('changes status from available to maintenance', async () => {
     const h = setup()
-    await h.create({ sku: 'CS-001', name: 'Device', categoryId: null, serialNumber: null, notes: null })
+    await h.create({ sku: 'CS-001', name: 'Device', categoryId: null, serialNumber: null, notes: null, groupId: null })
     const res = await h.changeStatus({ sku: 'CS-001', status: 'maintenance', notes: null })
     expect(res.ok).toBe(true)
     const detail = await h.get({ sku: 'CS-001' })
@@ -117,7 +119,7 @@ describe('devices.changeStatus', () => {
 
   it('returns BAD_REQUEST when target status is allocated', async () => {
     const h = setup()
-    await h.create({ sku: 'CS-002', name: 'Device', categoryId: null, serialNumber: null, notes: null })
+    await h.create({ sku: 'CS-002', name: 'Device', categoryId: null, serialNumber: null, notes: null, groupId: null })
     // @ts-expect-error intentional invalid status
     const res = await h.changeStatus({ sku: 'CS-002', status: 'allocated', notes: null })
     expect(res.ok).toBe(false)
@@ -254,5 +256,80 @@ describe('devices.delete', () => {
     const allocsLeft = db.select().from(allocations)
       .where(eq(allocations.deviceId, dev!.id)).all()
     expect(allocsLeft.length).toBe(0)
+  })
+})
+
+describe('devices.list — group and categoryId filter', () => {
+  it('returns group: null for devices without a group (seed data)', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: '' })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices.every((d) => d.group === null)).toBe(true)
+    expect(res.data.devices.every((d) => d.groupId === null)).toBe(true)
+  })
+
+  it('filters by categoryId', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+    // Get first device's categoryId
+    const all = await h.list({ filter: 'all', query: '' })
+    if (!all.ok) throw new Error('list failed')
+    const catId = all.data.devices.find((d) => d.categoryId != null)?.categoryId ?? null
+    if (catId == null) return // skip if no categorised devices in seed
+
+    const res = await h.list({ filter: 'all', query: '', categoryId: catId })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices.every((d) => d.categoryId === catId)).toBe(true)
+  })
+})
+
+describe('devices.create / update — groupId', () => {
+  it('create accepts groupId and stores it', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const catalogH = makeCatalogHandlers(db)
+    const h = makeDeviceHandlers(db)
+
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catId = cats.data.categories[0].id
+    await catalogH.saveGroup({ name: 'TestGroup', categoryId: catId })
+    const after = await catalogH.list()
+    if (!after.ok) throw new Error('list failed')
+    const groupId = after.data.groups.find((g) => g.name === 'TestGroup')!.id
+
+    await h.create({ sku: 'GRP-0001', name: 'Grouped Device', categoryId: catId, serialNumber: null, notes: null, groupId })
+    const res = await h.list({ filter: 'all', query: 'GRP-0001' })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices[0].groupId).toBe(groupId)
+    expect(res.data.devices[0].group).toBe('TestGroup')
+  })
+
+  it('update auto-clears groupId when category changes', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const catalogH = makeCatalogHandlers(db)
+    const h = makeDeviceHandlers(db)
+
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catA = cats.data.categories[0].id
+    const catB = cats.data.categories[1]?.id
+    if (catB == null) return // need 2 categories
+
+    await catalogH.saveGroup({ name: 'GroupA', categoryId: catA })
+    const after = await catalogH.list()
+    if (!after.ok) throw new Error('list failed')
+    const groupId = after.data.groups.find((g) => g.name === 'GroupA')!.id
+
+    // Create device in catA with groupId
+    await h.create({ sku: 'AUTOGRP-001', name: 'Test', categoryId: catA, serialNumber: null, notes: null, groupId })
+
+    // Update to catB — groupId should be cleared
+    await h.update({ sku: 'AUTOGRP-001', name: 'Test', categoryId: catB, serialNumber: null, notes: null, groupId })
+    const res = await h.list({ filter: 'all', query: 'AUTOGRP-001' })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices[0].groupId).toBeNull()
   })
 })

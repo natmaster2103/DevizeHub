@@ -7,6 +7,7 @@ import {
   employees,
   departments,
   maintenanceLogs,
+  deviceGroups,
 } from '../db/schema'
 import type {
   ApiResponse,
@@ -42,6 +43,12 @@ function fmtDate(iso: string): string {
   return `${dd}/${mm}/${yyyy}`
 }
 
+function parseBorrowerName(notes: string | null): string | null {
+  if (!notes) return null
+  const match = notes.match(/^Người mượn:\s*(.+)/)
+  return match ? match[1].trim() : null
+}
+
 export function makeDeviceHandlers(db: AppDb) {
   return {
     async list(args: DeviceListArgs): Promise<ApiResponse<DeviceListResult>> {
@@ -56,9 +63,12 @@ export function makeDeviceHandlers(db: AppDb) {
           categoryId: devices.categoryId,
           categoryName: categories.name,
           notes: devices.notes,
+          groupId: devices.groupId,
+          groupName: deviceGroups.name,
         })
         .from(devices)
         .leftJoin(categories, eq(devices.categoryId, categories.id))
+        .leftJoin(deviceGroups, eq(devices.groupId, deviceGroups.id))
         .all()
 
       // Fetch active allocations (returnedAt IS NULL) with employee + department
@@ -68,6 +78,7 @@ export function makeDeviceHandlers(db: AppDb) {
           deviceId: allocations.deviceId,
           holderName: employees.name,
           deptName: departments.name,
+          notes: allocations.notes,
         })
         .from(allocations)
         .leftJoin(employees, eq(allocations.employeeId, employees.id))
@@ -95,9 +106,11 @@ export function makeDeviceHandlers(db: AppDb) {
           status: r.status as DeviceStatus,
           serialNumber: r.serialNumber ?? null,
           notes: r.notes ?? null,
-          holder: alloc?.holderName ?? null,
+          holder: alloc?.holderName ?? parseBorrowerName(alloc?.notes ?? null),
           department: alloc?.deptName ?? null,
           activeAllocationId: alloc?.allocationId ?? null,
+          group: r.groupName ?? null,
+          groupId: r.groupId ?? null,
         }
       })
 
@@ -117,6 +130,11 @@ export function makeDeviceHandlers(db: AppDb) {
             (d.department ?? '').toLowerCase().includes(q) ||
             (d.serialNumber ?? '').toLowerCase().includes(q),
         )
+      }
+
+      // Apply categoryId filter
+      if (args.categoryId != null) {
+        deviceRows = deviceRows.filter((d) => d.categoryId === args.categoryId)
       }
 
       const total = deviceRows.length
@@ -142,13 +160,16 @@ export function makeDeviceHandlers(db: AppDb) {
           name: devices.name,
           status: devices.status,
           serialNumber: devices.serialNumber,
-          notes: devices.notes,
-          createdAt: devices.createdAt,
           categoryId: devices.categoryId,
           categoryName: categories.name,
+          notes: devices.notes,
+          createdAt: devices.createdAt,
+          groupId: devices.groupId,
+          groupName: deviceGroups.name,
         })
         .from(devices)
         .leftJoin(categories, eq(devices.categoryId, categories.id))
+        .leftJoin(deviceGroups, eq(devices.groupId, deviceGroups.id))
         .where(eq(devices.sku, args.sku))
         .all()[0]
 
@@ -165,6 +186,7 @@ export function makeDeviceHandlers(db: AppDb) {
           allocationId: allocations.id,
           holderName: employees.name,
           deptName: departments.name,
+          notes: allocations.notes,
         })
         .from(allocations)
         .leftJoin(employees, eq(allocations.employeeId, employees.id))
@@ -172,7 +194,7 @@ export function makeDeviceHandlers(db: AppDb) {
         .where(and(eq(allocations.deviceId, deviceRow.id), isNull(allocations.returnedAt)))
         .all()[0]
 
-      const holderName = activeAlloc?.holderName ?? null
+      const holderName = activeAlloc?.holderName ?? parseBorrowerName(activeAlloc?.notes ?? null)
       const deptName = activeAlloc?.deptName ?? null
 
       const deviceRowOut: DeviceDetailResult['device'] = {
@@ -186,6 +208,8 @@ export function makeDeviceHandlers(db: AppDb) {
         department: deptName,
         notes: deviceRow.notes ?? null,
         activeAllocationId: activeAlloc?.allocationId ?? null,
+        group: deviceRow.groupName ?? null,
+        groupId: deviceRow.groupId ?? null,
       }
 
       // Build info fields
@@ -207,6 +231,7 @@ export function makeDeviceHandlers(db: AppDb) {
           returnedAt: allocations.returnedAt,
           holderName: employees.name,
           deptName: departments.name,
+          notes: allocations.notes,
         })
         .from(allocations)
         .leftJoin(employees, eq(allocations.employeeId, employees.id))
@@ -217,17 +242,18 @@ export function makeDeviceHandlers(db: AppDb) {
       const historyEntries: DeviceHistoryEntry[] = []
 
       for (const a of allocRows) {
+        const name = a.holderName ?? parseBorrowerName(a.notes) ?? ''
         historyEntries.push({
           type: 'allocate',
           title: 'Bàn giao',
-          sub: `${a.holderName ?? ''}${a.deptName ? ' – ' + a.deptName : ''}`,
+          sub: `${name}${a.deptName ? ' – ' + a.deptName : ''}`,
           date: fmtDate(a.issuedAt),
         })
         if (a.returnedAt) {
           historyEntries.push({
             type: 'return',
             title: 'Thu hồi',
-            sub: `${a.holderName ?? ''}${a.deptName ? ' – ' + a.deptName : ''}`,
+            sub: `${name}${a.deptName ? ' – ' + a.deptName : ''}`,
             date: fmtDate(a.returnedAt),
           })
         }
@@ -291,6 +317,7 @@ export function makeDeviceHandlers(db: AppDb) {
         serialNumber: args.serialNumber?.trim() || null,
         status: 'available',
         notes: args.notes?.trim() || null,
+        groupId: args.groupId ?? null,
         createdAt: now,
         updatedAt: now,
       }).run()
@@ -305,12 +332,26 @@ export function makeDeviceHandlers(db: AppDb) {
       if (!device) {
         return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy thiết bị.' } }
       }
+
+      // Auto-clear groupId if the group belongs to a different category
+      let resolvedGroupId: number | null = args.groupId ?? null
+      if (resolvedGroupId != null) {
+        const grp = db.select({ categoryId: deviceGroups.categoryId })
+          .from(deviceGroups)
+          .where(eq(deviceGroups.id, resolvedGroupId))
+          .all()[0]
+        if (!grp || grp.categoryId !== args.categoryId) {
+          resolvedGroupId = null
+        }
+      }
+
       db.update(devices)
         .set({
           name: args.name.trim(),
           categoryId: args.categoryId ?? null,
           serialNumber: args.serialNumber?.trim() || null,
           notes: args.notes?.trim() || null,
+          groupId: resolvedGroupId,
           updatedAt: new Date().toISOString(),
         })
         .where(eq(devices.sku, args.sku))
