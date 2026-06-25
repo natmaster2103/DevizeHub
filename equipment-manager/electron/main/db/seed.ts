@@ -61,16 +61,8 @@ export function seedIfEmpty(db: AppDb): void {
       catMap.set(name, row.id)
     }
 
-    // ── 2. Departments (7) ────────────────────────────────────────────────
-    const deptNames = [
-      'Phòng Kế toán',
-      'Phòng Nhân sự',
-      'Phòng Kỹ thuật',
-      'Phòng Kinh doanh',
-      'Phòng IT',
-      'Phòng Hành chính',
-      'Ban Giám đốc',
-    ]
+    // ── 2. Departments (4) ────────────────────────────────────────────────
+    const deptNames = ['Đội 1', 'Đội 2', 'Đội 3', 'Đội 4']
     const deptMap = new Map<string, number>()
     for (const name of deptNames) {
       const [row] = tx
@@ -83,13 +75,13 @@ export function seedIfEmpty(db: AppDb): void {
 
     // ── 3. Employees (NV001..NV007) ───────────────────────────────────────
     const seedEmployees = [
-      { code: 'NV001', name: 'Nguyễn Văn An', dept: 'Phòng Kế toán' },
-      { code: 'NV002', name: 'Trần Thị Bình', dept: 'Phòng Nhân sự' },
-      { code: 'NV003', name: 'Lê Hoàng Cường', dept: 'Phòng Kỹ thuật' },
-      { code: 'NV004', name: 'Phạm Thị Dung', dept: 'Phòng Hành chính' },
-      { code: 'NV005', name: 'Vũ Minh Đức', dept: 'Phòng Kinh doanh' },
-      { code: 'NV006', name: 'Hoàng Thị Em', dept: 'Phòng Nhân sự' },
-      { code: 'NV007', name: 'Đặng Văn Phúc', dept: 'Phòng IT' },
+      { code: 'NV001', name: 'Nguyễn Văn An', dept: 'Đội 1' },
+      { code: 'NV002', name: 'Trần Thị Bình', dept: 'Đội 4' },
+      { code: 'NV003', name: 'Lê Hoàng Cường', dept: 'Đội 2' },
+      { code: 'NV004', name: 'Phạm Thị Dung', dept: 'Đội 1' },
+      { code: 'NV005', name: 'Vũ Minh Đức', dept: 'Đội 2' },
+      { code: 'NV006', name: 'Hoàng Thị Em', dept: 'Đội 4' },
+      { code: 'NV007', name: 'Đặng Văn Phúc', dept: 'Đội 3' },
     ]
     const empMap = new Map<string, number>() // name → id
     let nextEmpNum = 8
@@ -296,7 +288,7 @@ export function seedIfEmpty(db: AppDb): void {
     const requestDefs = [
       {
         code: 'DX-301',
-        dept: 'Phòng Kế toán',
+        dept: 'Đội 1',
         requester: 'Nguyễn Văn An',
         date: '12/03/2026',
         vnStatus: 'Đang trang bị',
@@ -318,7 +310,7 @@ export function seedIfEmpty(db: AppDb): void {
       },
       {
         code: 'DX-300',
-        dept: 'Phòng Kinh doanh',
+        dept: 'Đội 2',
         requester: 'Vũ Minh Đức',
         date: '09/03/2026',
         vnStatus: 'Đang trang bị',
@@ -331,7 +323,7 @@ export function seedIfEmpty(db: AppDb): void {
       },
       {
         code: 'DX-298',
-        dept: 'Phòng IT',
+        dept: 'Đội 3',
         requester: 'Đặng Văn Phúc',
         date: '03/03/2026',
         vnStatus: 'Hoàn tất',
@@ -348,7 +340,7 @@ export function seedIfEmpty(db: AppDb): void {
       },
       {
         code: 'DX-295',
-        dept: 'Phòng Nhân sự',
+        dept: 'Đội 4',
         requester: 'Hoàng Thị Em',
         date: '24/02/2026',
         vnStatus: 'Hoàn tất',
@@ -358,7 +350,7 @@ export function seedIfEmpty(db: AppDb): void {
       },
       {
         code: 'DX-293',
-        dept: 'Phòng Hành chính',
+        dept: 'Đội 1',
         requester: 'Phạm Thị Dung',
         date: '18/02/2026',
         vnStatus: 'Đang xử lý',
@@ -368,7 +360,7 @@ export function seedIfEmpty(db: AppDb): void {
       },
       {
         code: 'DX-290',
-        dept: 'Phòng Kỹ thuật',
+        dept: 'Đội 2',
         requester: 'Lê Hoàng Cường',
         date: '10/02/2026',
         vnStatus: 'Hoàn tất',

@@ -51,9 +51,9 @@ describe('dashboard.summary', () => {
     const res = await dash.summary()
     expect(res.ok).toBe(true)
     if (!res.ok) return
-    // The seed creates 7 departments — all of them get a card.
+    // The seed creates 4 departments — all of them get a card.
     const deptOnly = res.data.deptCards.filter((c) => c.kind === 'department')
-    expect(deptOnly.length).toBe(7)
+    expect(deptOnly.length).toBe(4)
   })
 
   it('a department with no active allocations shows count 0 and no request chips', async () => {
@@ -61,8 +61,8 @@ describe('dashboard.summary', () => {
     const res = await dash.summary()
     expect(res.ok).toBe(true)
     if (!res.ok) return
-    // Ban Giám đốc has no allocations at all in the seed.
-    const empty = res.data.deptCards.find((c) => c.dept === 'Ban Giám đốc')
+    // Đội 4 (DX-295, 'Hoàn tất') has no active allocations in the seed.
+    const empty = res.data.deptCards.find((c) => c.dept === 'Đội 4')
     expect(empty).toBeDefined()
     expect(empty!.count).toBe(0)
     expect(empty!.requests.length).toBe(0)

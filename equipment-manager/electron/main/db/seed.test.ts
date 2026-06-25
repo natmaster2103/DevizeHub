@@ -32,9 +32,11 @@ describe('seedIfEmpty', () => {
     }
   })
 
-  it('seeds 7 departments', () => {
+  it('seeds 4 default departments (Đội 1–4)', () => {
     const db = freshSeededDb()
-    expect(db.select().from(departments).all().length).toBe(7)
+    const rows = db.select().from(departments).all()
+    expect(rows.length).toBe(4)
+    expect(rows.map((d) => d.name).sort()).toEqual(['Đội 1', 'Đội 2', 'Đội 3', 'Đội 4'])
   })
 
   it('does not double-seed when called twice', () => {
