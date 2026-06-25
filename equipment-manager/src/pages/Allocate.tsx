@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from '@/lib/api'
-import type { CreateAllocationArgs, AvailableDeviceRow } from '@shared/ipc'
+import type { AvailableDeviceRow, QuickAllocateArgs } from '@shared/ipc'
 
 function useAllocateFormData() {
   return useQuery({
@@ -164,10 +164,8 @@ export default function Allocate() {
   const { data, isLoading } = useAllocateFormData()
 
   const [selectedDevices, setSelectedDevices] = useState<AvailableDeviceRow[]>([])
-  const [employeeId, setEmployeeId] = useState('')
+  const [borrowerName, setBorrowerName] = useState('')
   const [departmentId, setDepartmentId] = useState('')
-  const [dueDate, setDueDate] = useState('')
-  const [requestId, setRequestId] = useState('')
   const [conditionNotes, setConditionNotes] = useState('')
   const [formError, setFormError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -184,11 +182,7 @@ export default function Allocate() {
   }
 
   const mutation = useMutation({
-    mutationFn: async (args: Omit<CreateAllocationArgs, 'deviceSku'> & { deviceSkus: string[] }) => {
-      for (const sku of args.deviceSkus) {
-        await unwrap(api.allocate.create({ ...args, deviceSku: sku }))
-      }
-    },
+    mutationFn: (args: QuickAllocateArgs) => unwrap(api.allocate.quick(args)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] })
       queryClient.invalidateQueries({ queryKey: ['allocate'] })
@@ -196,8 +190,7 @@ export default function Allocate() {
       queryClient.invalidateQueries({ queryKey: ['requests', 'available-devices'] })
       setSuccess(true)
       setSelectedDevices([])
-      setEmployeeId(''); setDepartmentId(''); setDueDate('')
-      setRequestId(''); setConditionNotes('')
+      setBorrowerName(''); setDepartmentId(''); setConditionNotes('')
     },
     onError: (e) => setFormError((e as Error).message),
   })
@@ -206,16 +199,14 @@ export default function Allocate() {
     setFormError('')
     setSuccess(false)
     if (selectedDevices.length === 0) { setFormError('Vui lòng chọn thiết bị.'); return }
-    if (!employeeId) { setFormError('Vui lòng chọn nhân viên nhận.'); return }
+    if (!borrowerName.trim()) { setFormError('Vui lòng nhập tên người nhận.'); return }
     if (!departmentId) { setFormError('Vui lòng chọn phòng ban.'); return }
     mutation.mutate({
       deviceSkus: selectedDevices.map(d => d.sku),
-      employeeId: Number(employeeId),
       departmentId: Number(departmentId),
-      dueDate: dueDate || null,
-      requestId: requestId ? Number(requestId) : null,
-      conditionOut: conditionNotes,
-      notes: '',
+      borrowerName: borrowerName.trim(),
+      requestId: null,
+      notes: conditionNotes || null,
     })
   }
 
@@ -233,6 +224,15 @@ export default function Allocate() {
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
             Bàn giao nhanh thiết bị cho nhân viên, không qua phiếu đề nghị.
           </div>
+        </div>
+
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start',
+          padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+          background: 'var(--surface-2)', color: 'var(--text-muted)',
+          border: '1px solid var(--border)',
+        }}>
+          Không liên kết phiếu đề nghị
         </div>
 
         {isLoading && (
@@ -254,17 +254,15 @@ export default function Allocate() {
             {/* 2-col: employee + department */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <Field label="Nhân viên nhận" required>
-                <select value={employeeId} onChange={e => setEmployeeId(e.target.value)}
-                  style={selectStyle}
+                <input
+                  type="text"
+                  value={borrowerName}
+                  onChange={e => setBorrowerName(e.target.value)}
+                  placeholder="Nhập tên người nhận"
+                  style={inputStyle}
                   onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--border)')}>
-                  <option value="">— Chọn nhân viên —</option>
-                  {(data?.employees ?? []).map(e => (
-                    <option key={e.id} value={e.id}>
-                      {e.name}{e.departmentName ? ` · ${e.departmentName}` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+                />
               </Field>
               <Field label="Phòng ban" required>
                 <select value={departmentId} onChange={e => setDepartmentId(e.target.value)}
@@ -274,27 +272,6 @@ export default function Allocate() {
                   <option value="">— Chọn phòng ban —</option>
                   {(data?.departments ?? []).map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-
-            {/* 2-col: due date + request */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <Field label="Ngày hẹn trả">
-                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                  style={inputStyle}
-                  onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
-              </Field>
-              <Field label="Liên kết phiếu đề nghị">
-                <select value={requestId} onChange={e => setRequestId(e.target.value)}
-                  style={selectStyle}
-                  onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--border)')}>
-                  <option value="">— Không liên kết —</option>
-                  {(data?.requests ?? []).map(r => (
-                    <option key={r.id} value={r.id}>{r.code}</option>
                   ))}
                 </select>
               </Field>
