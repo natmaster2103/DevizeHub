@@ -59,6 +59,8 @@ export interface GroupRow {
 | `CatalogListResult` | add `groups: GroupRow[]` |
 | `DeviceRow` | add `group: string \| null`, `groupId: number \| null` |
 | `DeviceListArgs` | add `categoryId?: number \| null` |
+| `DeviceCreateArgs` | add `groupId: number \| null` |
+| `DeviceUpdateArgs` | add `groupId: number \| null` |
 
 ### New channels
 
