@@ -8,6 +8,7 @@ import { IconBox, IconBack, IconSwap, IconEdit, IconCheck, IconDown, IconWrench,
 import { DeviceFormDialog } from '@/components/DeviceFormDialog'
 import { ChangeStatusDialog } from '@/components/ChangeStatusDialog'
 import { ReturnDialog } from '@/components/ReturnDialog'
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog'
 import { api, unwrap } from '@/lib/api'
 import type { DeviceHistoryEntry, ReturnDeviceArgs } from '@shared/ipc'
 
@@ -38,6 +39,7 @@ export default function DeviceDetail() {
   const [showFormDialog, setShowFormDialog] = useState(false)
   const [showStatusDialog, setShowStatusDialog] = useState(false)
   const [showReturnDialog, setShowReturnDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const { data: catalogData } = useQuery({
     queryKey: ['catalog'],
@@ -72,6 +74,14 @@ export default function DeviceDetail() {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['requests'] })
       setShowReturnDialog(false)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => unwrap(api.devices.delete({ sku: sku! })),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      navigate('/devices')
     },
   })
 
@@ -189,6 +199,20 @@ export default function DeviceDetail() {
             >
               <IconEdit size={15} />
               <span>Chỉnh sửa</span>
+            </button>
+            <button
+              onClick={() => setShowDeleteDialog(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                height: 38, padding: '0 14px',
+                border: '1px solid #dc2626', borderRadius: 'var(--rad-md)',
+                background: 'var(--surface)', color: '#dc2626',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(220,38,38,.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
+            >
+              <span>Xoá</span>
             </button>
           </div>
         )}
@@ -312,6 +336,16 @@ export default function DeviceDetail() {
         }}>
           {(returnMutation.error as Error).message}
         </div>
+      )}
+      {showDeleteDialog && data && (
+        <ConfirmDeleteDialog
+          deviceName={data.device.name}
+          deviceSku={data.device.sku}
+          loading={deleteMutation.isPending}
+          error={deleteMutation.isError ? (deleteMutation.error as Error).message : ''}
+          onClose={() => { setShowDeleteDialog(false); deleteMutation.reset() }}
+          onConfirm={() => deleteMutation.mutate()}
+        />
       )}
     </div>
   )
