@@ -1,15 +1,17 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import type { AppDb } from '../db'
-import { categories, departments, employees } from '../db/schema'
+import { categories, departments, employees, deviceGroups, devices } from '../db/schema'
 import type {
   ApiResponse,
   CatalogListResult,
   CategoryRow,
   DepartmentRow,
   EmployeeRow,
+  GroupRow,
   SaveCategoryArgs,
   SaveDepartmentArgs,
   SaveEmployeeArgs,
+  SaveGroupArgs,
   DeleteEntityArgs,
 } from '@shared/ipc'
 
@@ -31,6 +33,16 @@ export function makeCatalogHandlers(db: AppDb) {
         .from(employees)
         .leftJoin(departments, eq(employees.departmentId, departments.id))
         .all()
+      const grps = db
+        .select({
+          id: deviceGroups.id,
+          name: deviceGroups.name,
+          categoryId: deviceGroups.categoryId,
+          categoryName: categories.name,
+        })
+        .from(deviceGroups)
+        .leftJoin(categories, eq(deviceGroups.categoryId, categories.id))
+        .all()
 
       return {
         ok: true,
@@ -43,6 +55,12 @@ export function makeCatalogHandlers(db: AppDb) {
             employeeCode: e.employeeCode,
             departmentId: e.departmentId ?? null,
             departmentName: e.departmentName ?? '',
+          })),
+          groups: grps.map<GroupRow>((g) => ({
+            id: g.id,
+            name: g.name,
+            categoryId: g.categoryId ?? 0,
+            categoryName: g.categoryName ?? '',
           })),
         },
       }
@@ -67,6 +85,16 @@ export function makeCatalogHandlers(db: AppDb) {
     },
 
     async deleteCategory(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>> {
+      const hasGroups = db.select({ id: deviceGroups.id })
+        .from(deviceGroups)
+        .where(eq(deviceGroups.categoryId, args.id))
+        .all()
+      if (hasGroups.length > 0) {
+        return {
+          ok: false,
+          error: { code: 'CONFLICT', message: 'Vui lòng xóa hoặc chuyển nhóm trước.' },
+        }
+      }
       db.delete(categories).where(eq(categories.id, args.id)).run()
       return { ok: true, data: { ok: true } }
     },
@@ -118,6 +146,32 @@ export function makeCatalogHandlers(db: AppDb) {
 
     async deleteEmployee(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>> {
       db.delete(employees).where(eq(employees.id, args.id)).run()
+      return { ok: true, data: { ok: true } }
+    },
+
+    async saveGroup(args: SaveGroupArgs): Promise<ApiResponse<{ ok: true }>> {
+      if (!args?.name?.trim()) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên nhóm không được trống.' } }
+      }
+      if (args.id) {
+        db.update(deviceGroups)
+          .set({ name: args.name.trim(), categoryId: args.categoryId })
+          .where(eq(deviceGroups.id, args.id))
+          .run()
+      } else {
+        db.insert(deviceGroups)
+          .values({ name: args.name.trim(), categoryId: args.categoryId, createdAt: now() })
+          .run()
+      }
+      return { ok: true, data: { ok: true } }
+    },
+
+    async deleteGroup(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>> {
+      db.update(devices)
+        .set({ groupId: null })
+        .where(eq(devices.groupId, args.id))
+        .run()
+      db.delete(deviceGroups).where(eq(deviceGroups.id, args.id)).run()
       return { ok: true, data: { ok: true } }
     },
   }
