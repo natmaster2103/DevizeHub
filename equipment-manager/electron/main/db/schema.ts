@@ -7,6 +7,13 @@ export const categories = sqliteTable('categories', {
   createdAt: text('created_at').notNull()
 })
 
+export const deviceGroups = sqliteTable('device_groups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  categoryId: integer('category_id').references(() => categories.id),
+  createdAt: text('created_at').notNull()
+})
+
 export const departments = sqliteTable('departments', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
@@ -42,7 +49,8 @@ export const devices = sqliteTable('devices', {
   }).notNull(),
   notes: text('notes'),
   createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull()
+  updatedAt: text('updated_at').notNull(),
+  groupId: integer('group_id').references(() => deviceGroups.id),
 })
 
 export const requests = sqliteTable('requests', {
@@ -80,11 +88,12 @@ export const maintenanceLogs = sqliteTable('maintenance_logs', {
 })
 
 export const schema = {
-  categories, departments, employees, appUsers,
+  categories, deviceGroups, departments, employees, appUsers,
   devices, requests, allocations, maintenanceLogs
 }
 
 export type Category = typeof categories.$inferSelect
+export type DeviceGroup = typeof deviceGroups.$inferSelect
 export type Department = typeof departments.$inferSelect
 export type Employee = typeof employees.$inferSelect
 export type AppUser = typeof appUsers.$inferSelect
