@@ -33,13 +33,14 @@ export default function Devices() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | DeviceStatus>('all')
 
+  const [categoryFilter, setCategoryFilter] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
 
   // Reset về trang 1 khi filter hoặc query thay đổi
-  useEffect(() => { setPage(1) }, [filter, query])
+  useEffect(() => { setPage(1) }, [filter, query, categoryFilter])
 
-  const { data, isLoading, error } = useDevices(filter, query, page, PAGE_SIZE)
+  const { data, isLoading, error } = useDevices(filter, query, page, PAGE_SIZE, categoryFilter)
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE)
 
   const { data: catalogData } = useQuery({
@@ -101,9 +102,17 @@ export default function Devices() {
       header: 'Tên thiết bị',
       cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span>
     }),
-    colHelper.accessor('category', {
-      header: 'Loại',
-      cell: info => <span style={{ color: 'var(--text-muted)' }}>{info.getValue()}</span>
+    colHelper.display({
+      id: 'categoryGroup',
+      header: 'Loại / Nhóm',
+      cell: ({ row }) => (
+        <div style={{ lineHeight: 1.3 }}>
+          <div style={{ color: 'var(--text)', fontWeight: 500 }}>{row.original.category || '—'}</div>
+          {row.original.group && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{row.original.group}</div>
+          )}
+        </div>
+      )
     }),
     colHelper.accessor('status', {
       header: 'Trạng thái',
@@ -224,6 +233,23 @@ export default function Devices() {
             <IconScan size={16} />
           </span>
         </div>
+        <select
+          value={categoryFilter ?? ''}
+          onChange={e => setCategoryFilter(e.target.value ? Number(e.target.value) : null)}
+          style={{
+            height: 40, padding: '0 12px',
+            border: '1px solid var(--border)', borderRadius: 'var(--rad-md)',
+            background: 'var(--surface)', color: categoryFilter == null ? 'var(--text-muted)' : 'var(--text)',
+            fontSize: 14, outline: 'none', cursor: 'pointer',
+            appearance: 'auto' as React.CSSProperties['appearance'],
+            minWidth: 140,
+          }}
+        >
+          <option value="">Tất cả loại</option>
+          {(catalogData?.categories ?? []).map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
         {isAdmin && (
           <button
             onClick={() => setFormDialog({ mode: 'create' })}
@@ -368,8 +394,10 @@ export default function Devices() {
             categoryId: formDialog.device.categoryId,
             serialNumber: formDialog.device.serialNumber,
             notes: formDialog.device.notes,
+            groupId: formDialog.device.groupId,
           } : undefined}
           categories={categories}
+          groups={catalogData?.groups ?? []}
           loading={formDialog.mode === 'create' ? createMutation.isPending : updateMutation.isPending}
           error={formDialog.mode === 'create'
             ? (createMutation.isError ? (createMutation.error as Error).message : '')

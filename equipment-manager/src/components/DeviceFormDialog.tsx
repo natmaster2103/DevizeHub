@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { DeviceCreateArgs, DeviceUpdateArgs, CategoryRow } from '@shared/ipc'
+import type { DeviceCreateArgs, DeviceUpdateArgs, CategoryRow, GroupRow } from '@shared/ipc'
 
 export interface DeviceFormInitial {
   sku: string
@@ -7,12 +7,14 @@ export interface DeviceFormInitial {
   categoryId: number | null
   serialNumber: string | null
   notes: string | null
+  groupId: number | null
 }
 
 export interface DeviceFormDialogProps {
   mode: 'create' | 'edit'
   initial?: DeviceFormInitial
   categories: CategoryRow[]
+  groups: GroupRow[]
   loading: boolean
   error: string
   onClose(): void
@@ -29,30 +31,39 @@ function IconX({ size = 16 }: { size?: number }) {
 }
 
 export function DeviceFormDialog({
-  mode, initial, categories, loading, error, onClose, onSubmit,
+  mode, initial, categories, groups, loading, error, onClose, onSubmit,
 }: DeviceFormDialogProps) {
   const [sku, setSku] = useState(initial?.sku ?? '')
   const [name, setName] = useState(initial?.name ?? '')
   const [categoryId, setCategoryId] = useState<number | null>(initial?.categoryId ?? null)
+  const [groupId, setGroupId] = useState<number | null>(initial?.groupId ?? null)
   const [serialNumber, setSerialNumber] = useState(initial?.serialNumber ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [localError, setLocalError] = useState('')
+
+  const availableGroups = categoryId != null ? groups.filter((g) => g.categoryId === categoryId) : []
 
   useEffect(() => {
     if (initial) {
       setSku(initial.sku)
       setName(initial.name)
       setCategoryId(initial.categoryId)
+      setGroupId(initial.groupId)
       setSerialNumber(initial.serialNumber ?? '')
       setNotes(initial.notes ?? '')
     }
   }, [initial?.sku])
 
+  function handleCategoryChange(val: string) {
+    setCategoryId(val ? Number(val) : null)
+    setGroupId(null)
+  }
+
   function submit() {
     if (!sku.trim()) { setLocalError('SKU không được để trống.'); return }
     if (!name.trim()) { setLocalError('Tên thiết bị không được để trống.'); return }
     setLocalError('')
-    onSubmit({ sku: sku.trim(), name: name.trim(), categoryId, serialNumber: serialNumber.trim() || null, notes: notes.trim() || null })
+    onSubmit({ sku: sku.trim(), name: name.trim(), categoryId, serialNumber: serialNumber.trim() || null, notes: notes.trim() || null, groupId })
   }
 
   const inputStyle: React.CSSProperties = {
@@ -138,7 +149,7 @@ export function DeviceFormDialog({
             </label>
             <select
               value={categoryId ?? ''}
-              onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}
+              onChange={e => handleCategoryChange(e.target.value)}
               style={{ ...inputStyle, appearance: 'auto' as React.CSSProperties['appearance'] }}
               onFocus={focusBorder}
               onBlur={blurBorder}
@@ -149,6 +160,27 @@ export function DeviceFormDialog({
               ))}
             </select>
           </div>
+
+          {/* Group (only when category selected) */}
+          {categoryId != null && (
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                Nhóm
+              </label>
+              <select
+                value={groupId ?? ''}
+                onChange={e => setGroupId(e.target.value ? Number(e.target.value) : null)}
+                style={{ ...inputStyle, appearance: 'auto' as React.CSSProperties['appearance'] }}
+                onFocus={focusBorder}
+                onBlur={blurBorder}
+              >
+                <option value="">— Không có nhóm —</option>
+                {availableGroups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Serial */}
           <div>

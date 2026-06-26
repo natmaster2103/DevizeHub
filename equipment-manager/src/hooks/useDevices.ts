@@ -7,9 +7,10 @@ export function useDevices(
   query: string,
   page = 1,
   pageSize = 20,
+  categoryId?: number | null
 ) {
   return useQuery({
-    queryKey: ['devices', filter, query, page, pageSize],
-    queryFn: () => unwrap(api.devices.list({ filter, query, page, pageSize })),
+    queryKey: ['devices', filter, query, page, pageSize, categoryId ?? null],
+    queryFn: () => unwrap(api.devices.list({ filter, query, page, pageSize, categoryId: categoryId ?? null })),
   })
 }

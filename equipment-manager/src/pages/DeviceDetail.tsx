@@ -295,8 +295,10 @@ export default function DeviceDetail() {
             categoryId: data.device.categoryId,
             serialNumber: data.device.serialNumber,
             notes: data.device.notes,
+            groupId: data.device.groupId,
           }}
           categories={categories}
+          groups={catalogData?.groups ?? []}
           loading={updateMutation.isPending}
           error={updateMutation.isError ? (updateMutation.error as Error).message : ''}
           onClose={() => { setShowFormDialog(false); updateMutation.reset() }}
