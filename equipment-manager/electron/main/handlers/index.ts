@@ -48,6 +48,8 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.catalogDeleteDepartment, (_e, args) => auth_guard(() => catalogH.deleteDepartment(args)))
   ipcMain.handle(CHANNELS.catalogSaveEmployee, (_e, args) => auth_guard(() => catalogH.saveEmployee(args)))
   ipcMain.handle(CHANNELS.catalogDeleteEmployee, (_e, args) => auth_guard(() => catalogH.deleteEmployee(args)))
+  ipcMain.handle(CHANNELS.catalogSaveGroup, (_e, args) => auth_guard(() => catalogH.saveGroup(args)))
+  ipcMain.handle(CHANNELS.catalogDeleteGroup, (_e, args) => auth_guard(() => catalogH.deleteGroup(args)))
   ipcMain.handle(CHANNELS.settingsListUsers, () => auth_guard(() => settingsH.listUsers()))
   ipcMain.handle(CHANNELS.settingsSaveUser, (_e, args) => auth_guard(() => settingsH.saveUser(args)))
   ipcMain.handle(CHANNELS.settingsChangePassword, (_e, args) => auth_guard(() => settingsH.changePassword(args)))

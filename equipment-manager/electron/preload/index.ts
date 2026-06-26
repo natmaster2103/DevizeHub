@@ -39,6 +39,8 @@ const api: Api = {
     deleteDepartment: (args) => ipcRenderer.invoke(CHANNELS.catalogDeleteDepartment, args),
     saveEmployee: (args) => ipcRenderer.invoke(CHANNELS.catalogSaveEmployee, args),
     deleteEmployee: (args) => ipcRenderer.invoke(CHANNELS.catalogDeleteEmployee, args),
+    saveGroup: (args) => ipcRenderer.invoke(CHANNELS.catalogSaveGroup, args),
+    deleteGroup: (args) => ipcRenderer.invoke(CHANNELS.catalogDeleteGroup, args),
   },
   settings: {
     listUsers: () => ipcRenderer.invoke(CHANNELS.settingsListUsers),
