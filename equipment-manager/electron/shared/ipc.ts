@@ -70,7 +70,7 @@ export interface DeviceListArgs {
 }
 export interface DeviceListResult {
   devices: DeviceRow[]   // đã slice theo page
-  counts: StatusCount[]  // tính trên toàn bộ devices (không bị filter/query ảnh hưởng)
+  counts: StatusCount[]  // theo danh mục đang lọc; không bị filter trạng thái/tìm kiếm ảnh hưởng
   total: number          // tổng sau filter+search, trước slice — dùng tính totalPages
 }
 
