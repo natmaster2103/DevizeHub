@@ -282,6 +282,33 @@ describe('devices.list — group and categoryId filter', () => {
     if (!res.ok) throw new Error('list failed')
     expect(res.data.devices.every((d) => d.categoryId === catId)).toBe(true)
   })
+
+  it('counts are scoped to categoryId filter', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+
+    const all = await h.list({ filter: 'all', query: '' })
+    if (!all.ok) throw new Error('list failed')
+    const catId = all.data.devices.find((d) => d.categoryId != null)?.categoryId ?? null
+    if (catId == null) return // skip if no categorised devices in seed
+
+    const res = await h.list({ filter: 'all', query: '', categoryId: catId })
+    if (!res.ok) throw new Error('list failed')
+
+    const allCount = res.data.counts.find((c) => c.key === 'all')!
+    // 'all' count must match total (both scoped to the category)
+    expect(allCount.count).toBe(res.data.total)
+
+    // Sum of per-status counts must equal the 'all' count
+    const nonAllSum = res.data.counts
+      .filter((c) => c.key !== 'all')
+      .reduce((sum, c) => sum + c.count, 0)
+    expect(nonAllSum).toBe(allCount.count)
+
+    // Every returned device belongs to the filtered category
+    expect(res.data.devices.every((d) => d.categoryId === catId)).toBe(true)
+  })
 })
 
 describe('devices.create / update — groupId', () => {

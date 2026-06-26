@@ -89,12 +89,6 @@ export function makeDeviceHandlers(db: AppDb) {
       // Index active alloc by deviceId (one active alloc per device at most)
       const activeByDeviceId = new Map(activeAllocs.map((a) => [a.deviceId, a]))
 
-      // Build counts over full set
-      const counts: StatusCount[] = STATUS_KEYS.map((key) => ({
-        key,
-        count: key === 'all' ? devRows.length : devRows.filter((r) => r.status === key).length,
-      }))
-
       // Shape into DeviceRow
       let deviceRows: DeviceRow[] = devRows.map((r) => {
         const alloc = activeByDeviceId.get(r.id)
@@ -114,6 +108,17 @@ export function makeDeviceHandlers(db: AppDb) {
         }
       })
 
+      // Apply categoryId filter FIRST so counts are scoped to the selected category
+      if (args.categoryId != null) {
+        deviceRows = deviceRows.filter((d) => d.categoryId === args.categoryId)
+      }
+
+      // Build counts over category-scoped set (not affected by status filter or search query)
+      const counts: StatusCount[] = STATUS_KEYS.map((key) => ({
+        key,
+        count: key === 'all' ? deviceRows.length : deviceRows.filter((d) => d.status === key).length,
+      }))
+
       // Apply filter
       if (args.filter !== 'all') {
         deviceRows = deviceRows.filter((d) => d.status === args.filter)
@@ -130,11 +135,6 @@ export function makeDeviceHandlers(db: AppDb) {
             (d.department ?? '').toLowerCase().includes(q) ||
             (d.serialNumber ?? '').toLowerCase().includes(q),
         )
-      }
-
-      // Apply categoryId filter
-      if (args.categoryId != null) {
-        deviceRows = deviceRows.filter((d) => d.categoryId === args.categoryId)
       }
 
       const total = deviceRows.length
