@@ -333,6 +333,31 @@ describe('devices.create / update — groupId', () => {
     expect(res.data.devices[0].group).toBe('TestGroup')
   })
 
+  it('create clears groupId when group belongs to a different category', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const catalogH = makeCatalogHandlers(db)
+    const h = makeDeviceHandlers(db)
+
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catA = cats.data.categories[0].id
+    const catB = cats.data.categories[1]?.id
+    if (catB == null) return // need 2 categories
+
+    // Create a group in catA
+    await catalogH.saveGroup({ name: 'GroupInA', categoryId: catA })
+    const after = await catalogH.list()
+    if (!after.ok) throw new Error('list failed')
+    const groupId = after.data.groups.find((g) => g.name === 'GroupInA')!.id
+
+    // Create a device in catB with the group from catA — should be cleared
+    await h.create({ sku: 'CROSS-001', name: 'CrossCat Device', categoryId: catB, serialNumber: null, notes: null, groupId })
+    const res = await h.list({ filter: 'all', query: 'CROSS-001' })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices[0].groupId).toBeNull()
+  })
+
   it('update auto-clears groupId when category changes', async () => {
     const { db } = createDb(':memory:')
     runMigrations(db); seedIfEmpty(db)

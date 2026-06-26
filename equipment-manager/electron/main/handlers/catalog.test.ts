@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { eq } from 'drizzle-orm'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
-import { devices } from '../db/schema'
 import { makeCatalogHandlers } from './catalog'
 import { makeDeviceHandlers } from './devices'
 

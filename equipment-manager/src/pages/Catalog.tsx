@@ -107,10 +107,12 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
     mutationFn: (args: { id?: number; name: string; categoryId: number }) =>
       unwrap(api.catalog.saveGroup(args)),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['catalog'] }); setEditGroupId(null); setNewGroupName('') },
+    onError: (e: Error) => alert(e.message),
   })
   const delGroupMut = useMutation({
     mutationFn: (id: number) => unwrap(api.catalog.deleteGroup({ id })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['catalog'] }),
+    onError: (e: Error) => alert(e.message),
   })
 
   const selectedGroups = selectedCatId != null ? groups.filter((g) => g.categoryId === selectedCatId) : []

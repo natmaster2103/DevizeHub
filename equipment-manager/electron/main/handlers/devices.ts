@@ -309,6 +309,18 @@ export function makeDeviceHandlers(db: AppDb) {
       if (existing) {
         return { ok: false, error: { code: 'CONFLICT', message: `SKU "${args.sku.trim()}" đã tồn tại.` } }
       }
+      // Auto-clear groupId if the group belongs to a different category
+      let resolvedGroupId: number | null = args.groupId ?? null
+      if (resolvedGroupId != null) {
+        const grp = db.select({ categoryId: deviceGroups.categoryId })
+          .from(deviceGroups)
+          .where(eq(deviceGroups.id, resolvedGroupId))
+          .all()[0]
+        if (!grp || grp.categoryId !== args.categoryId) {
+          resolvedGroupId = null
+        }
+      }
+
       const now = new Date().toISOString()
       db.insert(devices).values({
         sku: args.sku.trim(),
@@ -317,7 +329,7 @@ export function makeDeviceHandlers(db: AppDb) {
         serialNumber: args.serialNumber?.trim() || null,
         status: 'available',
         notes: args.notes?.trim() || null,
-        groupId: args.groupId ?? null,
+        groupId: resolvedGroupId,
         createdAt: now,
         updatedAt: now,
       }).run()

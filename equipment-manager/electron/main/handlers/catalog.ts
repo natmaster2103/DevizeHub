@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import { categories, departments, employees, deviceGroups, devices } from '../db/schema'
 import type {

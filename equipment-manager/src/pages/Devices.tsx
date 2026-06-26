@@ -243,6 +243,7 @@ export default function Devices() {
             fontSize: 14, outline: 'none', cursor: 'pointer',
             appearance: 'auto' as React.CSSProperties['appearance'],
             minWidth: 140,
+            boxSizing: 'border-box' as React.CSSProperties['boxSizing'],
           }}
         >
           <option value="">Tất cả loại</option>
