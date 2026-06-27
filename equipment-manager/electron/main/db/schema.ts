@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, integer, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 export const categories = sqliteTable('categories', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -11,6 +11,7 @@ export const deviceGroups = sqliteTable('device_groups', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   categoryId: integer('category_id').references(() => categories.id),
+  minStock: integer('min_stock').notNull().default(0),
   createdAt: text('created_at').notNull()
 })
 
@@ -37,6 +38,22 @@ export const appUsers = sqliteTable('app_users', {
   active: integer('active').notNull().default(1),
   createdAt: text('created_at').notNull()
 })
+
+export const userPermissions = sqliteTable('user_permissions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull().references(() => appUsers.id, { onDelete: 'cascade' }),
+  permission: text('permission').notNull(),
+}, (t) => ({
+  uniq: uniqueIndex('uq_user_perm').on(t.userId, t.permission),
+}))
+
+export const userGroups = sqliteTable('user_groups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull().references(() => appUsers.id, { onDelete: 'cascade' }),
+  groupId: integer('group_id').notNull().references(() => deviceGroups.id, { onDelete: 'cascade' }),
+}, (t) => ({
+  uniq: uniqueIndex('uq_user_group').on(t.userId, t.groupId),
+}))
 
 export const devices = sqliteTable('devices', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -89,6 +106,7 @@ export const maintenanceLogs = sqliteTable('maintenance_logs', {
 
 export const schema = {
   categories, deviceGroups, departments, employees, appUsers,
+  userPermissions, userGroups,
   devices, requests, allocations, maintenanceLogs
 }
 
@@ -102,3 +120,5 @@ export type RequestRow = typeof requests.$inferSelect
 export type Allocation = typeof allocations.$inferSelect
 export type MaintenanceLog = typeof maintenanceLogs.$inferSelect
 export type DeviceStatus = Device['status']
+export type UserPermission = typeof userPermissions.$inferSelect
+export type UserGroup = typeof userGroups.$inferSelect

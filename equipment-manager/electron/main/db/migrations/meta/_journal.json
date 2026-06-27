@@ -15,6 +15,13 @@
       "when": 1782405552298,
       "tag": "0001_thankful_blackheart",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782548176788,
+      "tag": "0002_workable_trauma",
+      "breakpoints": true
     }
   ]
 }
