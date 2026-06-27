@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { eq } from 'drizzle-orm'
 import type { AppDb } from '../db'
-import { appUsers } from '../db/schema'
+import { appUsers, userPermissions, userGroups } from '../db/schema'
 import { session } from '../session'
 import type { LoginArgs, ApiResponse, LoginResult, SessionUser, Role } from '@shared/ipc'
 
@@ -22,9 +22,21 @@ export function makeAuthHandlers(db: AppDb) {
       if (!bcrypt.compareSync(args.password, row.passwordHash)) {
         return { ok: false, error: BAD_CREDS }
       }
+      const perms = db.select({ permission: userPermissions.permission })
+        .from(userPermissions)
+        .where(eq(userPermissions.userId, row.id))
+        .all()
+        .map((p) => p.permission)
+
+      const gids = db.select({ groupId: userGroups.groupId })
+        .from(userGroups)
+        .where(eq(userGroups.userId, row.id))
+        .all()
+        .map((g) => g.groupId)
+
       const user: SessionUser = {
         id: row.id, username: row.username, role: row.role as Role,
-        displayName: row.displayName, permissions: [], groupIds: [],
+        displayName: row.displayName, permissions: perms, groupIds: gids,
       }
       session.current = user
       return { ok: true, data: { user } }

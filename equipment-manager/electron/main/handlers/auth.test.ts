@@ -46,4 +46,25 @@ describe('auth handlers', () => {
     await h.logout()
     expect(session.current).toBeNull()
   })
+
+  it('sets permissions on session after login', async () => {
+    const h = setup()
+    const res = await h.login({ username: 'admin', password: 'admin' })
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.data.user.permissions).toContain('allocate')
+      expect(res.data.user.permissions).toContain('manage_users')
+      expect(res.data.user.permissions.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('staff user gets only view_reports permission', async () => {
+    const h = setup()
+    const res = await h.login({ username: 'hang.le', password: 'admin' })
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.data.user.permissions).toEqual(['view_reports'])
+      expect(res.data.user.groupIds).toEqual([])
+    }
+  })
 })
