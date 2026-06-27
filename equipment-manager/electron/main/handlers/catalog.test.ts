@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
+import { session } from '../session'
 import { makeCatalogHandlers } from './catalog'
 import { makeDeviceHandlers } from './devices'
 
@@ -119,5 +120,48 @@ describe('catalog.deleteCategory', () => {
     if (!saved.ok) throw new Error('save failed')
     const res = await catalog.deleteCategory({ id: saved.data.id })
     expect(res.ok).toBe(true)
+  })
+})
+
+describe('catalog.saveGroup — minStock', () => {
+  function setup() {
+    const { db } = createDb(':memory:')
+    runMigrations(db)
+    seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: [], groupIds: [] }
+    return makeCatalogHandlers(db)
+  }
+
+  it('creates a group with minStock and list returns it', async () => {
+    const h = setup()
+    // Need a category id — get one from list
+    const listRes = await h.list()
+    expect(listRes.ok).toBe(true)
+    if (!listRes.ok) return
+    const catId = listRes.data.categories[0].id
+
+    await h.saveGroup({ name: 'Test Group', categoryId: catId, minStock: 3 })
+    const res2 = await h.list()
+    if (!res2.ok) return
+    const grp = res2.data.groups.find((g) => g.name === 'Test Group')
+    expect(grp).toBeDefined()
+    expect(grp?.minStock).toBe(3)
+  })
+
+  it('updates minStock on existing group', async () => {
+    const h = setup()
+    const listRes = await h.list()
+    if (!listRes.ok) return
+    const catId = listRes.data.categories[0].id
+
+    await h.saveGroup({ name: 'Grp A', categoryId: catId, minStock: 2 })
+    const mid = await h.list()
+    if (!mid.ok) return
+    const grp = mid.data.groups.find((g) => g.name === 'Grp A')!
+
+    await h.saveGroup({ id: grp.id, name: 'Grp A', categoryId: catId, minStock: 7 })
+    const final = await h.list()
+    if (!final.ok) return
+    expect(final.data.groups.find((g) => g.id === grp.id)?.minStock).toBe(7)
   })
 })

@@ -38,6 +38,7 @@ export function makeCatalogHandlers(db: AppDb) {
           id: deviceGroups.id,
           name: deviceGroups.name,
           categoryId: deviceGroups.categoryId,
+          minStock: deviceGroups.minStock,
           categoryName: categories.name,
         })
         .from(deviceGroups)
@@ -61,6 +62,7 @@ export function makeCatalogHandlers(db: AppDb) {
             name: g.name,
             categoryId: g.categoryId ?? 0,
             categoryName: g.categoryName ?? '',
+            minStock: g.minStock ?? 0,
           })),
         },
       }
@@ -155,12 +157,12 @@ export function makeCatalogHandlers(db: AppDb) {
       }
       if (args.id) {
         db.update(deviceGroups)
-          .set({ name: args.name.trim(), categoryId: args.categoryId })
+          .set({ name: args.name.trim(), categoryId: args.categoryId, minStock: args.minStock ?? 0 })
           .where(eq(deviceGroups.id, args.id))
           .run()
       } else {
         db.insert(deviceGroups)
-          .values({ name: args.name.trim(), categoryId: args.categoryId, createdAt: now() })
+          .values({ name: args.name.trim(), categoryId: args.categoryId, minStock: args.minStock ?? 0, createdAt: now() })
           .run()
       }
       return { ok: true, data: { ok: true } }
