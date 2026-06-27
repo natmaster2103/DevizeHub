@@ -1,14 +1,18 @@
 import bcrypt from 'bcryptjs'
+import { eq } from 'drizzle-orm'
 import type { AppDb } from './index'
 import {
   categories,
   departments,
   employees,
   appUsers,
+  userPermissions,
+  userGroups,
   devices,
   requests,
   allocations,
 } from './schema'
+import { ALL_PERMISSIONS } from '@shared/ipc'
 
 const NOW = '2026-06-01T00:00:00.000Z'
 
@@ -156,6 +160,19 @@ export function seedIfEmpty(db: AppDb): void {
         createdAt: NOW,
       },
     ]).run()
+
+    // ── 4b. Seed permissions ──────────────────────────────────────────────
+    // Admin gets all permissions; staff gets view_reports only
+    for (const perm of ALL_PERMISSIONS) {
+      tx.insert(userPermissions).values({ userId: adminUser.id, permission: perm }).run()
+    }
+
+    // Get staff user IDs to seed view_reports
+    const staffUsers = tx.select({ id: appUsers.id }).from(appUsers)
+      .where(eq(appUsers.role, 'staff')).all()
+    for (const u of staffUsers) {
+      tx.insert(userPermissions).values({ userId: u.id, permission: 'view_reports' }).run()
+    }
 
     // ── 5. Devices (12) ───────────────────────────────────────────────────
     const deviceRows = [
