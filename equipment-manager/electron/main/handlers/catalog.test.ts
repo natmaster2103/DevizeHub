@@ -29,7 +29,7 @@ describe('catalog.saveGroup', () => {
     if (!cats.ok) throw new Error('list failed')
     const catId = cats.data.categories[0].id
 
-    const res = await catalog.saveGroup({ name: 'Dell XPS 15', categoryId: catId })
+    const res = await catalog.saveGroup({ name: 'Dell XPS 15', categoryId: catId, minStock: 0 })
     expect(res.ok).toBe(true)
 
     const after = await catalog.list()
@@ -45,12 +45,12 @@ describe('catalog.saveGroup', () => {
     if (!cats.ok) throw new Error('list failed')
     const catId = cats.data.categories[0].id
 
-    await catalog.saveGroup({ name: 'Original', categoryId: catId })
+    await catalog.saveGroup({ name: 'Original', categoryId: catId, minStock: 0 })
     const after = await catalog.list()
     if (!after.ok) throw new Error('list failed')
     const group = after.data.groups.find((g) => g.name === 'Original')!
 
-    const res = await catalog.saveGroup({ id: group.id, name: 'Updated', categoryId: catId })
+    const res = await catalog.saveGroup({ id: group.id, name: 'Updated', categoryId: catId, minStock: 0 })
     expect(res.ok).toBe(true)
 
     const final = await catalog.list()
@@ -64,7 +64,7 @@ describe('catalog.saveGroup', () => {
     const cats = await catalog.list()
     if (!cats.ok) throw new Error('list failed')
     const catId = cats.data.categories[0].id
-    const res = await catalog.saveGroup({ name: '   ', categoryId: catId })
+    const res = await catalog.saveGroup({ name: '   ', categoryId: catId, minStock: 0 })
     expect(res.ok).toBe(false)
   })
 })
@@ -76,7 +76,7 @@ describe('catalog.deleteGroup', () => {
     if (!cats.ok) throw new Error('list failed')
     const catId = cats.data.categories[0].id
 
-    await catalog.saveGroup({ name: 'ToDelete', categoryId: catId })
+    await catalog.saveGroup({ name: 'ToDelete', categoryId: catId, minStock: 0 })
     const after = await catalog.list()
     if (!after.ok) throw new Error('list failed')
     const group = after.data.groups.find((g) => g.name === 'ToDelete')!
@@ -106,7 +106,7 @@ describe('catalog.deleteCategory', () => {
     if (!cats.ok) throw new Error('list failed')
     const cat = cats.data.categories[0]
 
-    await catalog.saveGroup({ name: 'BlockerGroup', categoryId: cat.id })
+    await catalog.saveGroup({ name: 'BlockerGroup', categoryId: cat.id, minStock: 0 })
     const res = await catalog.deleteCategory({ id: cat.id })
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.error.code).toBe('CONFLICT')

@@ -31,16 +31,39 @@ export const CHANNELS = {
   settingsSaveUser: 'settings.saveUser',
   settingsChangePassword: 'settings.changePassword',
   settingsDbInfo: 'settings.dbInfo',
+  settingsResetData: 'settings.resetData',
+  settingsSaveUserPermissions: 'settings.saveUserPermissions',
+  settingsSaveUserGroups: 'settings.saveUserGroups',
 } as const
 
 export type Role = 'admin' | 'staff'
 export type DeviceStatus = 'available' | 'allocated' | 'maintenance' | 'broken' | 'decommissioned'
+
+export type Permission =
+  | 'allocate'
+  | 'return_device'
+  | 'create_request'
+  | 'edit_device'
+  | 'change_status'
+  | 'delete_device'
+  | 'manage_catalog'
+  | 'manage_users'
+  | 'reset_data'
+  | 'view_reports'
+
+export const ALL_PERMISSIONS: Permission[] = [
+  'allocate', 'return_device', 'create_request', 'edit_device',
+  'change_status', 'delete_device', 'manage_catalog', 'manage_users',
+  'reset_data', 'view_reports',
+]
 
 export interface SessionUser {
   id: number
   username: string
   role: Role
   displayName: string
+  permissions: string[]
+  groupIds: number[]
 }
 
 export interface LoginArgs { username: string; password: string }
@@ -67,6 +90,7 @@ export interface DeviceListArgs {
   page?: number      // 1-based, default 1
   pageSize?: number  // default 20
   categoryId?: number | null
+  groupId?: number | null
 }
 export interface DeviceListResult {
   devices: DeviceRow[]   // đã slice theo page
@@ -143,7 +167,7 @@ export interface DashboardSummary {
 export interface CategoryRow { id: number; name: string; minStock: number }
 export interface DepartmentRow { id: number; name: string }
 export interface EmployeeRow { id: number; name: string; employeeCode: string; departmentId: number | null; departmentName: string }
-export interface GroupRow { id: number; name: string; categoryId: number; categoryName: string }
+export interface GroupRow { id: number; name: string; categoryId: number; categoryName: string; minStock: number }
 export interface CatalogListResult {
   categories: CategoryRow[]
   departments: DepartmentRow[]
@@ -153,8 +177,10 @@ export interface CatalogListResult {
 export interface SaveCategoryArgs { id?: number; name: string; minStock: number }
 export interface SaveDepartmentArgs { id?: number; name: string }
 export interface SaveEmployeeArgs { id?: number; name: string; employeeCode: string; departmentId: number | null }
-export interface SaveGroupArgs { id?: number; name: string; categoryId: number }
+export interface SaveGroupArgs { id?: number; name: string; categoryId: number; minStock: number }
 export interface DeleteEntityArgs { id: number }
+export interface SaveUserPermissionsArgs { userId: number; permissions: Permission[] }
+export interface SaveUserGroupsArgs { userId: number; groupIds: number[] }
 
 // ── Allocate ─────────────────────────────────────────────────────────────────
 export interface CreateAllocationArgs {
@@ -182,7 +208,15 @@ export interface QuickAllocateArgs {
 }
 
 // ── Settings ─────────────────────────────────────────────────────────────────
-export interface AppUserRow { id: number; username: string; displayName: string; role: Role; active: boolean }
+export interface AppUserRow {
+  id: number
+  username: string
+  displayName: string
+  role: Role
+  active: boolean
+  permissions: string[]
+  groupIds: number[]
+}
 export interface SaveUserArgs { id?: number; username: string; displayName: string; role: Role; password?: string; active: boolean }
 export interface ChangePasswordArgs { currentPassword: string; newPassword: string }
 export interface DbInfoResult { path: string; sizeKb: number; lastBackup: string | null }
@@ -285,5 +319,8 @@ export interface Api {
     saveUser(args: SaveUserArgs): Promise<ApiResponse<AppUserRow>>
     changePassword(args: ChangePasswordArgs): Promise<ApiResponse<{ ok: true }>>
     dbInfo(): Promise<ApiResponse<DbInfoResult>>
+    resetData(): Promise<ApiResponse<{ ok: true }>>
+    saveUserPermissions(args: SaveUserPermissionsArgs): Promise<ApiResponse<{ ok: true }>>
+    saveUserGroups(args: SaveUserGroupsArgs): Promise<ApiResponse<{ ok: true }>>
   }
 }

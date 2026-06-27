@@ -25,7 +25,7 @@ describe('registerHandlers', () => {
     const ipcMain = { handle: (ch: string, fn: Function) => handlers.set(ch, fn) }
     registerHandlers(ipcMain as any, db, ':memory:')
     // Simulate a logged-in session
-    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin' }
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: [], groupIds: [] }
     const res = await handlers.get(CHANNELS.devicesList)!({}, { filter: 'all', query: '' })
     session.current = null
     expect(res.ok).toBe(true)

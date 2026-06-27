@@ -10,7 +10,7 @@ describe('requests.create', () => {
   it('creates a new request with valid args', async () => {
     const { db } = createDb(':memory:')
     runMigrations(db); seedIfEmpty(db)
-    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin' }
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: [], groupIds: [] }
 
     const deptId = db.select({ id: departments.id }).from(departments).all()[0]?.id ?? 1
     const handlers = makeRequestHandlers(db)
@@ -27,7 +27,7 @@ describe('requests.create', () => {
   it('rejects empty code', async () => {
     const { db } = createDb(':memory:')
     runMigrations(db); seedIfEmpty(db)
-    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin' }
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: [], groupIds: [] }
     const handlers = makeRequestHandlers(db)
     const res = await handlers.create({ code: '  ', departmentId: 1, createdAt: null, notes: null })
     expect(res.ok).toBe(false)
@@ -37,7 +37,7 @@ describe('requests.create', () => {
   it('rejects duplicate code', async () => {
     const { db } = createDb(':memory:')
     runMigrations(db); seedIfEmpty(db)
-    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin' }
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: [], groupIds: [] }
 
     const deptId = db.select({ id: departments.id }).from(departments).all()[0]?.id ?? 1
     const handlers = makeRequestHandlers(db)
@@ -53,7 +53,7 @@ describe('requests.list — status derivation', () => {
   it('returns pending for a newly created request with no devices', async () => {
     const { db } = createDb(':memory:')
     runMigrations(db); seedIfEmpty(db)
-    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin' }
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: [], groupIds: [] }
 
     const deptId = db.select({ id: departments.id }).from(departments).all()[0]?.id ?? 1
     const handlers = makeRequestHandlers(db)

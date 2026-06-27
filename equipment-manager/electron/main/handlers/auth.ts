@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import { appUsers } from '../db/schema'
 import { session } from '../session'
-import type { LoginArgs, ApiResponse, LoginResult, SessionUser } from '@shared/ipc'
+import type { LoginArgs, ApiResponse, LoginResult, SessionUser, Role } from '@shared/ipc'
 
 const BAD_CREDS = { code: 'BAD_CREDENTIALS', message: 'Tên đăng nhập hoặc mật khẩu không đúng.' }
 
@@ -22,7 +22,10 @@ export function makeAuthHandlers(db: AppDb) {
       if (!bcrypt.compareSync(args.password, row.passwordHash)) {
         return { ok: false, error: BAD_CREDS }
       }
-      const user: SessionUser = { id: row.id, username: row.username, role: row.role, displayName: row.displayName }
+      const user: SessionUser = {
+        id: row.id, username: row.username, role: row.role as Role,
+        displayName: row.displayName, permissions: [], groupIds: [],
+      }
       session.current = user
       return { ok: true, data: { user } }
     },
