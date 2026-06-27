@@ -2,18 +2,40 @@ import { eq } from 'drizzle-orm'
 import { statSync } from 'fs'
 import bcrypt from 'bcryptjs'
 import type { AppDb } from '../db'
-import { appUsers } from '../db/schema'
+import {
+  appUsers,
+  allocations,
+  maintenanceLogs,
+  requests,
+  devices,
+  employees,
+  categories,
+  departments,
+  userPermissions,
+  userGroups,
+} from '../db/schema'
+import { seedIfEmpty } from '../db/seed'
 import { session } from '../session'
 import type {
   ApiResponse,
   AppUserRow,
   SaveUserArgs,
+  SaveUserPermissionsArgs,
+  SaveUserGroupsArgs,
   ChangePasswordArgs,
   DbInfoResult,
   Role,
+  Permission,
 } from '@shared/ipc'
 
 function now() { return new Date().toISOString() }
+
+export function requirePermission(perm: Permission): ApiResponse<never> | null {
+  if (!session.current?.permissions?.includes(perm)) {
+    return { ok: false, error: { code: 'FORBIDDEN', message: 'Bạn không có quyền thực hiện thao tác này.' } }
+  }
+  return null
+}
 
 export function makeSettingsHandlers(db: AppDb, dbPath: string) {
   return {
@@ -21,13 +43,23 @@ export function makeSettingsHandlers(db: AppDb, dbPath: string) {
       const rows = db.select().from(appUsers).all()
       return {
         ok: true,
-        data: rows.map<AppUserRow>((u) => ({
-          id: u.id,
-          username: u.username,
-          displayName: u.displayName,
-          role: u.role as Role,
-          active: u.active === 1,
-        })),
+        data: rows.map<AppUserRow>((u) => {
+          const perms = db.select({ permission: userPermissions.permission })
+            .from(userPermissions)
+            .where(eq(userPermissions.userId, u.id))
+            .all()
+            .map((p) => p.permission)
+          const gids = db.select({ groupId: userGroups.groupId })
+            .from(userGroups)
+            .where(eq(userGroups.userId, u.id))
+            .all()
+            .map((g) => g.groupId)
+          return {
+            id: u.id, username: u.username, displayName: u.displayName,
+            role: u.role as Role, active: u.active === 1,
+            permissions: perms, groupIds: gids,
+          }
+        }),
       }
     },
 
@@ -52,7 +84,7 @@ export function makeSettingsHandlers(db: AppDb, dbPath: string) {
         db.update(appUsers).set(updates).where(eq(appUsers.id, args.id)).run()
         return {
           ok: true,
-          data: { id: args.id, username: args.username.trim(), displayName: args.displayName.trim(), role: args.role, active: args.active },
+          data: { id: args.id, username: args.username.trim(), displayName: args.displayName.trim(), role: args.role, active: args.active, permissions: [], groupIds: [] },
         }
       }
 
@@ -73,7 +105,7 @@ export function makeSettingsHandlers(db: AppDb, dbPath: string) {
         .all()[0]
       return {
         ok: true,
-        data: { id: result.id, username: result.username, displayName: result.displayName, role: result.role as Role, active: result.active === 1 },
+        data: { id: result.id, username: result.username, displayName: result.displayName, role: result.role as Role, active: result.active === 1, permissions: [], groupIds: [] },
       }
     },
 
@@ -94,6 +126,50 @@ export function makeSettingsHandlers(db: AppDb, dbPath: string) {
       }
       const newHash = await bcrypt.hash(args.newPassword, 10)
       db.update(appUsers).set({ passwordHash: newHash }).where(eq(appUsers.id, user.id)).run()
+      return { ok: true, data: { ok: true } }
+    },
+
+    resetData(): ApiResponse<{ ok: true }> {
+      const forbidden = requirePermission('reset_data')
+      if (forbidden) return forbidden
+      // Wipe all tables (children first to satisfy FK constraints), then reseed.
+      db.transaction((tx) => {
+        tx.delete(allocations).run()
+        tx.delete(maintenanceLogs).run()
+        tx.delete(requests).run()
+        tx.delete(devices).run()
+        tx.delete(employees).run()
+        tx.delete(appUsers).run()
+        tx.delete(categories).run()
+        tx.delete(departments).run()
+      })
+      seedIfEmpty(db)
+      return { ok: true, data: { ok: true } }
+    },
+
+    async saveUserPermissions(args: SaveUserPermissionsArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_users')
+      if (forbidden) return forbidden
+      if (!args?.userId) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'userId không hợp lệ.' } }
+      }
+      db.delete(userPermissions).where(eq(userPermissions.userId, args.userId)).run()
+      for (const perm of (args.permissions ?? [])) {
+        db.insert(userPermissions).values({ userId: args.userId, permission: perm }).run()
+      }
+      return { ok: true, data: { ok: true } }
+    },
+
+    async saveUserGroups(args: SaveUserGroupsArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_users')
+      if (forbidden) return forbidden
+      if (!args?.userId) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'userId không hợp lệ.' } }
+      }
+      db.delete(userGroups).where(eq(userGroups.userId, args.userId)).run()
+      for (const gid of (args.groupIds ?? [])) {
+        db.insert(userGroups).values({ userId: args.userId, groupId: gid }).run()
+      }
       return { ok: true, data: { ok: true } }
     },
 
