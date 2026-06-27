@@ -91,7 +91,9 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
   // Group editing state
   const [editGroupId, setEditGroupId] = useState<number | null>(null)
   const [editGroupName, setEditGroupName] = useState('')
+  const [editGroupMin, setEditGroupMin] = useState(0)
   const [newGroupName, setNewGroupName] = useState('')
+  const [newGroupMin, setNewGroupMin] = useState(0)
 
   const saveCatMut = useMutation({
     mutationFn: (args: { id?: number; name: string; minStock: number }) =>
@@ -104,9 +106,9 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
     onError: (e: Error) => alert(e.message),
   })
   const saveGroupMut = useMutation({
-    mutationFn: (args: { id?: number; name: string; categoryId: number }) =>
+    mutationFn: (args: { id?: number; name: string; categoryId: number; minStock: number }) =>
       unwrap(api.catalog.saveGroup(args)),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['catalog'] }); setEditGroupId(null); setNewGroupName('') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['catalog'] }); setEditGroupId(null); setNewGroupName(''); setNewGroupMin(0) },
     onError: (e: Error) => alert(e.message),
   })
   const delGroupMut = useMutation({
@@ -178,12 +180,13 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
       {/* ── Right: groups ── */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--rad-lg)', overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 60px' : '1fr', padding: '0 16px', height: 42, alignItems: 'center', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 80px 60px' : '1fr 80px', padding: '0 16px', height: 42, alignItems: 'center', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
           <div>
             {selectedCatId != null
               ? `Nhóm — ${rows.find((r) => r.id === selectedCatId)?.name ?? ''}`
               : 'Nhóm'}
           </div>
+          <div>Min</div>
           {isAdmin && selectedCatId != null && <div />}
         </div>
 
@@ -194,24 +197,26 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
         ) : (
           <>
             {selectedGroups.map(grp => (
-              <div key={grp.id} style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 60px' : '1fr', padding: '0 16px', minHeight: 48, alignItems: 'center', borderBottom: '1px solid var(--border)', fontSize: 14 }}
+              <div key={grp.id} style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 80px 60px' : '1fr 80px', padding: '0 16px', minHeight: 48, alignItems: 'center', borderBottom: '1px solid var(--border)', fontSize: 14 }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
                 onMouseLeave={e => (e.currentTarget.style.background = '')}
               >
                 {editGroupId === grp.id ? (
                   <>
                     <InlineInput value={editGroupName} onChange={e => setEditGroupName(e.target.value)} style={{ width: '90%' }} />
+                    <InlineInput type="number" min={0} value={editGroupMin} onChange={e => setEditGroupMin(Number(e.target.value))} style={{ width: 64 }} />
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => saveGroupMut.mutate({ id: grp.id, name: editGroupName, categoryId: selectedCatId })} style={{ height: 28, padding: '0 10px', fontSize: 12, fontWeight: 600, border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', cursor: 'pointer' }}>Lưu</button>
-                      <button onClick={() => setEditGroupId(null)} style={{ height: 28, padding: '0 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>Hủy</button>
+                      <button onClick={() => saveGroupMut.mutate({ id: grp.id, name: editGroupName, categoryId: selectedCatId, minStock: editGroupMin })} style={{ height: 28, padding: '0 10px', fontSize: 12, fontWeight: 600, border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', cursor: 'pointer' }}>Lưu</button>
+                      <button onClick={() => { setEditGroupId(null); setEditGroupMin(0) }} style={{ height: 28, padding: '0 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>Hủy</button>
                     </div>
                   </>
                 ) : (
                   <>
                     <div style={{ fontWeight: 500 }}>{grp.name}</div>
+                    <div style={{ color: 'var(--text-muted)' }}>{grp.minStock}</div>
                     {isAdmin && (
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <IconBtn title="Sửa" onClick={() => { setEditGroupId(grp.id); setEditGroupName(grp.name) }}><IconEdit size={13} /></IconBtn>
+                        <IconBtn title="Sửa" onClick={() => { setEditGroupId(grp.id); setEditGroupName(grp.name); setEditGroupMin(grp.minStock) }}><IconEdit size={13} /></IconBtn>
                         <IconBtn title="Xóa" onClick={() => delGroupMut.mutate(grp.id)}><IconTrash size={13} /></IconBtn>
                       </div>
                     )}
@@ -225,9 +230,10 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
             )}
 
             {isAdmin && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', padding: '10px 16px', alignItems: 'center', gap: 8, background: 'var(--surface-2)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 60px', padding: '10px 16px', alignItems: 'center', gap: 8, background: 'var(--surface-2)' }}>
                 <InlineInput value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder="Tên nhóm mới" style={{ width: '90%' }} />
-                <button onClick={() => { if (newGroupName.trim()) saveGroupMut.mutate({ name: newGroupName, categoryId: selectedCatId }) }} style={{ height: 32, padding: '0 12px', display: 'inline-flex', alignItems: 'center', gap: 5, border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                <InlineInput type="number" min={0} value={newGroupMin} onChange={e => setNewGroupMin(Number(e.target.value))} style={{ width: 64 }} />
+                <button onClick={() => { if (newGroupName.trim()) saveGroupMut.mutate({ name: newGroupName, categoryId: selectedCatId, minStock: newGroupMin }) }} style={{ height: 32, padding: '0 12px', display: 'inline-flex', alignItems: 'center', gap: 5, border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   <IconPlus size={13} />Thêm
                 </button>
               </div>
