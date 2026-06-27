@@ -34,13 +34,16 @@ export default function Devices() {
   const [filter, setFilter] = useState<'all' | DeviceStatus>('all')
 
   const [categoryFilter, setCategoryFilter] = useState<number | null>(null)
+  const [groupId, setGroupId] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
 
   // Reset về trang 1 khi filter hoặc query thay đổi
   useEffect(() => { setPage(1) }, [filter, query, categoryFilter])
+  // Reset groupId khi đổi loại
+  useEffect(() => { setGroupId(null); setPage(1) }, [categoryFilter])
 
-  const { data, isLoading, error } = useDevices(filter, query, page, PAGE_SIZE, categoryFilter)
+  const { data, isLoading, error } = useDevices(filter, query, page, PAGE_SIZE, categoryFilter, groupId)
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE)
 
   const { data: catalogData } = useQuery({
@@ -48,6 +51,7 @@ export default function Devices() {
     queryFn: () => unwrap(api.catalog.list()),
   })
   const categories = catalogData?.categories ?? []
+  const groupsForCategory = (catalogData?.groups ?? []).filter((g) => g.categoryId === categoryFilter)
 
   const [formDialog, setFormDialog] = useState<
     null | { mode: 'create' } | { mode: 'edit'; device: DeviceRow }
@@ -251,6 +255,28 @@ export default function Devices() {
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+        {categoryFilter != null && groupsForCategory.length > 0 && (
+          <select
+            value={groupId ?? ''}
+            onChange={e => setGroupId(e.target.value ? Number(e.target.value) : null)}
+            style={{
+              height: 40, padding: '0 12px',
+              border: '1px solid var(--border)', borderRadius: 'var(--rad-md)',
+              background: 'var(--surface)', color: groupId == null ? 'var(--text-muted)' : 'var(--text)',
+              fontSize: 14, outline: 'none', cursor: 'pointer',
+              appearance: 'auto' as React.CSSProperties['appearance'],
+              minWidth: 130,
+              boxSizing: 'border-box' as React.CSSProperties['boxSizing'],
+            }}
+            onFocus={e => (e.currentTarget.style.borderColor = 'var(--primary)')}
+            onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+          >
+            <option value="">Tất cả nhóm</option>
+            {groupsForCategory.map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        )}
         {hasPermission('edit_device') && (
           <button
             onClick={() => setFormDialog({ mode: 'create' })}
