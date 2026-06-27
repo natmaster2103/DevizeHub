@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, and, isNull } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import { devices, categories, allocations, employees, departments, requests } from '../db/schema'
 import { session } from '../session'
@@ -17,6 +17,8 @@ import type {
   AvailableDevicesResult,
   CreateRequestArgs,
   CreateRequestResult,
+  UpdateRequestArgs,
+  DeleteRequestArgs,
 } from '@shared/ipc'
 
 function fmtDate(iso: string): string {
@@ -283,18 +285,9 @@ export function makeRequestHandlers(db: AppDb) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Vui lòng chọn phòng ban.' } }
       }
 
-      const existing = db
-        .select({ id: requests.id })
-        .from(requests)
-        .where(eq(requests.code, args.code.trim()))
-        .all()[0]
-      if (existing) {
-        return { ok: false, error: { code: 'CONFLICT', message: 'Mã phiếu đã tồn tại.' } }
-      }
-
       const now = args.createdAt ?? new Date().toISOString()
 
-      db.insert(requests)
+      const result = db.insert(requests)
         .values({
           code: args.code.trim(),
           departmentId: args.departmentId,
@@ -305,20 +298,75 @@ export function makeRequestHandlers(db: AppDb) {
         })
         .run()
 
-      const inserted = db
-        .select({ id: requests.id })
-        .from(requests)
-        .where(eq(requests.code, args.code.trim()))
-        .all()[0]
-
-      return { ok: true, data: { id: inserted.id, code: args.code.trim() } }
+      return { ok: true, data: { id: Number(result.lastInsertRowid), code: args.code.trim() } }
     },
 
-    async update(_args: unknown): Promise<ApiResponse<{ ok: true }>> {
-      return { ok: false, error: { code: 'NOT_IMPLEMENTED', message: '' } }
+    async update(args: UpdateRequestArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_requests')
+      if (forbidden) return forbidden
+      if (!args?.id || typeof args.id !== 'number') {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'ID phiếu không hợp lệ.' } }
+      }
+      if (!args.code?.trim()) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Mã phiếu không được để trống.' } }
+      }
+      if (!args.departmentId) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Vui lòng chọn phòng ban.' } }
+      }
+
+      const existing = db.select({ id: requests.id }).from(requests)
+        .where(eq(requests.id, args.id)).all()[0]
+      if (!existing) {
+        return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy phiếu đề nghị.' } }
+      }
+
+      db.update(requests)
+        .set({
+          code: args.code.trim(),
+          departmentId: args.departmentId,
+          createdAt: args.createdAt ?? new Date().toISOString(),
+          notes: args.notes ?? null,
+        })
+        .where(eq(requests.id, args.id))
+        .run()
+
+      return { ok: true, data: { ok: true } }
     },
-    async delete(_args: unknown): Promise<ApiResponse<{ ok: true }>> {
-      return { ok: false, error: { code: 'NOT_IMPLEMENTED', message: '' } }
+
+    async delete(args: DeleteRequestArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_requests')
+      if (forbidden) return forbidden
+      if (!args?.id || typeof args.id !== 'number') {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'ID phiếu không hợp lệ.' } }
+      }
+
+      const existing = db.select({ id: requests.id }).from(requests)
+        .where(eq(requests.id, args.id)).all()[0]
+      if (!existing) {
+        return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy phiếu đề nghị.' } }
+      }
+
+      const now = new Date().toISOString()
+
+      const unreturned = db
+        .select({ deviceId: allocations.deviceId })
+        .from(allocations)
+        .where(and(eq(allocations.requestId, args.id), isNull(allocations.returnedAt)))
+        .all()
+
+      for (const alloc of unreturned) {
+        if (alloc.deviceId != null) {
+          db.update(devices)
+            .set({ status: 'available', updatedAt: now })
+            .where(eq(devices.id, alloc.deviceId))
+            .run()
+        }
+      }
+
+      db.delete(allocations).where(eq(allocations.requestId, args.id)).run()
+      db.delete(requests).where(eq(requests.id, args.id)).run()
+
+      return { ok: true, data: { ok: true } }
     },
   }
 }
