@@ -3,7 +3,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { IconEdit, IconPlus } from '@/lib/icons'
-import type { AppUserRow, SaveUserArgs, Role } from '@shared/ipc'
+import type { AppUserRow, SaveUserArgs, Role, Permission } from '@shared/ipc'
+import { ALL_PERMISSIONS } from '@shared/ipc'
+
+const PERMISSION_LABELS: Record<Permission, string> = {
+  allocate: 'Cấp phát thiết bị',
+  return_device: 'Thu hồi thiết bị',
+  create_request: 'Tạo phiếu đề nghị',
+  edit_device: 'Sửa thông tin thiết bị',
+  change_status: 'Đổi trạng thái thiết bị',
+  delete_device: 'Xóa thiết bị',
+  manage_catalog: 'Quản lý danh mục',
+  manage_users: 'Quản lý tài khoản',
+  reset_data: 'Làm mới dữ liệu',
+  view_reports: 'Xem báo cáo',
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function useUsers() {
@@ -40,17 +54,41 @@ function SectionCard({ title, children }: { title: string; children: React.React
 // ── User edit modal ───────────────────────────────────────────────────────────
 function UserModal({ user, onClose }: { user: AppUserRow | null; onClose(): void }) {
   const qc = useQueryClient()
+  const { user: currentUser } = useAuth()
+  const currentUserId = currentUser?.id
   const isNew = !user
   const [username, setUsername] = useState(user?.username ?? '')
   const [displayName, setDisplayName] = useState(user?.displayName ?? '')
   const [role, setRole] = useState<Role>(user?.role ?? 'staff')
   const [active, setActive] = useState(user?.active ?? true)
   const [password, setPassword] = useState('')
+  const [selectedPerms, setSelectedPerms] = useState<Permission[]>((user?.permissions ?? []) as Permission[])
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>(user?.groupIds ?? [])
   const [err, setErr] = useState('')
+
+  const { data: catalogData } = useQuery({
+    queryKey: ['catalog'],
+    queryFn: () => unwrap(api.catalog.list()),
+  })
+  const availableGroups = catalogData?.groups ?? []
+
+  const permMut = useMutation({
+    mutationFn: (args: { userId: number; permissions: Permission[] }) =>
+      unwrap(api.settings.saveUserPermissions(args)),
+  })
+  const groupMut = useMutation({
+    mutationFn: (args: { userId: number; groupIds: number[] }) =>
+      unwrap(api.settings.saveUserGroups(args)),
+  })
 
   const mut = useMutation({
     mutationFn: (args: SaveUserArgs) => unwrap(api.settings.saveUser(args)),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['settings', 'users'] }); onClose() },
+    onSuccess: async (saved) => {
+      await permMut.mutateAsync({ userId: saved.id, permissions: selectedPerms })
+      await groupMut.mutateAsync({ userId: saved.id, groupIds: selectedGroupIds })
+      qc.invalidateQueries({ queryKey: ['settings', 'users'] })
+      onClose()
+    },
     onError: (e) => setErr((e as Error).message),
   })
 
@@ -61,6 +99,8 @@ function UserModal({ user, onClose }: { user: AppUserRow | null; onClose(): void
     mut.mutate({ id: user?.id, username: username.trim(), displayName: displayName.trim(), role, active, password: password || undefined })
   }
 
+  const isSaving = mut.isPending || permMut.isPending || groupMut.isPending
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 50,
@@ -69,7 +109,8 @@ function UserModal({ user, onClose }: { user: AppUserRow | null; onClose(): void
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
-        width: 480, background: 'var(--surface)', borderRadius: 'var(--rad-lg)',
+        width: 560, maxHeight: '90vh', overflowY: 'auto',
+        background: 'var(--surface)', borderRadius: 'var(--rad-lg)',
         boxShadow: '0 20px 60px rgba(0,0,0,.35)', padding: 24,
         display: 'flex', flexDirection: 'column', gap: 16
       }}>
@@ -111,12 +152,61 @@ function UserModal({ user, onClose }: { user: AppUserRow | null; onClose(): void
           Tài khoản đang hoạt động
         </label>
 
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+            Quyền hạn
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {ALL_PERMISSIONS.map(perm => {
+              const isSelfLocked = !isNew && user?.id === currentUserId && (perm === 'manage_users' || perm === 'reset_data')
+              return (
+                <label key={perm} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: isSelfLocked ? 'not-allowed' : 'pointer', fontSize: 13, opacity: isSelfLocked ? 0.5 : 1 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedPerms.includes(perm)}
+                    disabled={isSelfLocked}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedPerms(prev => [...prev, perm])
+                      else setSelectedPerms(prev => prev.filter(p => p !== perm))
+                    }}
+                  />
+                  {PERMISSION_LABELS[perm]}
+                </label>
+              )
+            })}
+          </div>
+        </div>
+
+        {availableGroups.length > 0 && (
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              Nhóm phụ trách
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {availableGroups.map(g => (
+                <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, cursor: 'pointer', padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: selectedGroupIds.includes(g.id) ? 'var(--primary-soft)' : 'var(--surface)' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedGroupIds.includes(g.id)}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedGroupIds(prev => [...prev, g.id])
+                      else setSelectedGroupIds(prev => prev.filter(id => id !== g.id))
+                    }}
+                  />
+                  <span style={{ color: 'var(--text-muted)', fontSize: 11, marginRight: 2 }}>{g.categoryName}</span>
+                  {g.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         {err && <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>{err}</div>}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
           <button onClick={onClose} style={{ height: 38, padding: '0 16px', border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-          <button onClick={save} disabled={mut.isPending} style={{ height: 38, padding: '0 18px', border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: mut.isPending ? 'not-allowed' : 'pointer', opacity: mut.isPending ? 0.7 : 1 }}>
-            {mut.isPending ? 'Đang lưu…' : 'Lưu'}
+          <button onClick={save} disabled={isSaving} style={{ height: 38, padding: '0 18px', border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}>
+            {isSaving ? 'Đang lưu…' : 'Lưu'}
           </button>
         </div>
       </div>
@@ -344,6 +434,74 @@ function DbInfoSection() {
   )
 }
 
+// ── Reset data section (admin only) ───────────────────────────────────────────
+function ResetDataSection() {
+  const qc = useQueryClient()
+  const [confirming, setConfirming] = useState(false)
+  const [done, setDone] = useState(false)
+
+  const mut = useMutation({
+    mutationFn: () => unwrap(api.settings.resetData()),
+    onSuccess: () => {
+      setConfirming(false)
+      setDone(true)
+      qc.invalidateQueries()
+    },
+  })
+
+  return (
+    <div style={{ borderTop: '1px solid var(--border)', marginTop: 16, paddingTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Làm mới dữ liệu</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            Xóa toàn bộ dữ liệu hiện tại và khôi phục về dữ liệu mẫu mặc định.
+          </div>
+        </div>
+        <button
+          onClick={() => { setDone(false); setConfirming(true) }}
+          style={{
+            height: 38, padding: '0 16px', border: '1px solid #dc2626',
+            borderRadius: 'var(--rad-sm)', background: 'none', color: '#dc2626',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap'
+          }}
+        >
+          Làm mới dữ liệu
+        </button>
+      </div>
+
+      {done && (
+        <div style={{ fontSize: 13, color: '#16a34a', fontWeight: 600, marginTop: 12 }}>
+          Đã làm mới dữ liệu thành công!
+        </div>
+      )}
+
+      {confirming && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => { if (e.target === e.currentTarget && !mut.isPending) setConfirming(false) }}
+        >
+          <div style={{ width: 440, background: 'var(--surface)', borderRadius: 'var(--rad-lg)', boxShadow: '0 20px 60px rgba(0,0,0,.35)', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Xác nhận làm mới dữ liệu</div>
+            <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>
+              Toàn bộ thiết bị, phiếu, cấp phát và tài khoản sẽ bị <b>xóa vĩnh viễn</b> và thay bằng dữ liệu mẫu mặc định. Hành động này <b>không thể hoàn tác</b>.
+            </div>
+            {mut.isError && (
+              <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>{(mut.error as Error).message}</div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+              <button onClick={() => setConfirming(false)} disabled={mut.isPending} style={{ height: 38, padding: '0 16px', border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: mut.isPending ? 'not-allowed' : 'pointer' }}>Hủy</button>
+              <button onClick={() => mut.mutate()} disabled={mut.isPending} style={{ height: 38, padding: '0 18px', border: 'none', borderRadius: 'var(--rad-sm)', background: '#dc2626', color: '#fff', fontSize: 13, fontWeight: 600, cursor: mut.isPending ? 'not-allowed' : 'pointer', opacity: mut.isPending ? 0.7 : 1 }}>
+                {mut.isPending ? 'Đang làm mới…' : 'Xóa & làm mới'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Settings page ────────────────────────────────────────────────────────
 export default function Settings() {
   const { isAdmin } = useAuth()
@@ -362,6 +520,7 @@ export default function Settings() {
 
       <SectionCard title="Cơ sở dữ liệu">
         <DbInfoSection />
+        {isAdmin && <ResetDataSection />}
       </SectionCard>
     </div>
   )
