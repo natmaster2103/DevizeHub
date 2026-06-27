@@ -3,12 +3,14 @@ import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
 import { session } from '../session'
+import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeCatalogHandlers } from './catalog'
 import { makeDeviceHandlers } from './devices'
 
 function setup() {
   const { db } = createDb(':memory:')
   runMigrations(db); seedIfEmpty(db)
+  session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
   return { catalog: makeCatalogHandlers(db), devices: makeDeviceHandlers(db), db }
 }
 
@@ -128,7 +130,7 @@ describe('catalog.saveGroup — minStock', () => {
     const { db } = createDb(':memory:')
     runMigrations(db)
     seedIfEmpty(db)
-    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: [], groupIds: [] }
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
     return makeCatalogHandlers(db)
   }
 

@@ -1,5 +1,6 @@
 import { eq, isNull, and } from 'drizzle-orm'
 import type { AppDb } from '../db'
+import { requirePermission } from './settings'
 import {
   devices,
   categories,
@@ -304,6 +305,8 @@ export function makeDeviceHandlers(db: AppDb) {
     },
 
     async create(args: DeviceCreateArgs): Promise<ApiResponse<{ sku: string }>> {
+      const forbidden = requirePermission('edit_device')
+      if (forbidden) return forbidden
       if (!args?.sku?.trim()) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'SKU không được để trống.' } }
       }
@@ -342,6 +345,8 @@ export function makeDeviceHandlers(db: AppDb) {
     },
 
     async update(args: DeviceUpdateArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('edit_device')
+      if (forbidden) return forbidden
       if (!args?.name?.trim()) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên thiết bị không được để trống.' } }
       }
@@ -377,6 +382,8 @@ export function makeDeviceHandlers(db: AppDb) {
     },
 
     async changeStatus(args: DeviceChangeStatusArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('change_status')
+      if (forbidden) return forbidden
       const allowed: string[] = ['available', 'maintenance', 'broken', 'decommissioned']
       if (!allowed.includes(args.status)) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Không thể đổi sang trạng thái này thủ công.' } }
@@ -403,6 +410,8 @@ export function makeDeviceHandlers(db: AppDb) {
     },
 
     async delete(args: DeviceDeleteArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('delete_device')
+      if (forbidden) return forbidden
       const device = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, args.sku)).all()[0]
       if (!device) {
         return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy thiết bị.' } }

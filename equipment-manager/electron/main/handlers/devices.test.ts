@@ -4,6 +4,8 @@ import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
 import { devices, allocations } from '../db/schema'
+import { session } from '../session'
+import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeDeviceHandlers } from './devices'
 import { makeAllocateHandlers } from './allocate'
 import { makeCatalogHandlers } from './catalog'
@@ -11,6 +13,7 @@ import { makeCatalogHandlers } from './catalog'
 function setup() {
   const { db } = createDb(':memory:')
   runMigrations(db); seedIfEmpty(db)
+  session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
   return makeDeviceHandlers(db)
 }
 
@@ -405,5 +408,21 @@ describe('devices.create / update — groupId', () => {
     const res = await h.list({ filter: 'all', query: 'AUTOGRP-001' })
     if (!res.ok) throw new Error('list failed')
     expect(res.data.devices[0].groupId).toBeNull()
+  })
+})
+
+describe('devices — permission enforcement', () => {
+  it('rejects devices.create for session without edit_device', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db)
+    seedIfEmpty(db)
+    session.current = {
+      id: 2, username: 'staff', role: 'staff', displayName: 'Staff',
+      permissions: ['view_reports'], groupIds: [],
+    }
+    const h = makeDeviceHandlers(db)
+    const res = await h.create({ sku: 'X-001', name: 'Test', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('FORBIDDEN')
   })
 })

@@ -2,6 +2,7 @@ import { eq, inArray } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import { devices, categories, allocations, employees, departments, requests } from '../db/schema'
 import { session } from '../session'
+import { requirePermission } from './settings'
 import type {
   ApiResponse,
   RequestListArgs,
@@ -159,6 +160,8 @@ export function makeRequestHandlers(db: AppDb) {
     },
 
     async returnDevice(args: ReturnDeviceArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('return_device')
+      if (forbidden) return forbidden
       if (!args?.allocationId) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'ID cấp phát không hợp lệ.' } }
       }
@@ -269,6 +272,8 @@ export function makeRequestHandlers(db: AppDb) {
     },
 
     async create(args: CreateRequestArgs): Promise<ApiResponse<CreateRequestResult>> {
+      const forbidden = requirePermission('create_request')
+      if (forbidden) return forbidden
       if (!args?.code?.trim()) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Mã phiếu không được để trống.' } }
       }

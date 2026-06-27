@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import { categories, departments, employees, deviceGroups, devices } from '../db/schema'
+import { requirePermission } from './settings'
 import type {
   ApiResponse,
   CatalogListResult,
@@ -69,6 +70,8 @@ export function makeCatalogHandlers(db: AppDb) {
     },
 
     async saveCategory(args: SaveCategoryArgs): Promise<ApiResponse<CategoryRow>> {
+      const forbidden = requirePermission('manage_catalog')
+      if (forbidden) return forbidden
       if (!args?.name?.trim()) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên loại không được trống.' } }
       }
@@ -87,6 +90,8 @@ export function makeCatalogHandlers(db: AppDb) {
     },
 
     async deleteCategory(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_catalog')
+      if (forbidden) return forbidden
       const hasGroups = db.select({ id: deviceGroups.id })
         .from(deviceGroups)
         .where(eq(deviceGroups.categoryId, args.id))
@@ -102,6 +107,8 @@ export function makeCatalogHandlers(db: AppDb) {
     },
 
     async saveDepartment(args: SaveDepartmentArgs): Promise<ApiResponse<DepartmentRow>> {
+      const forbidden = requirePermission('manage_catalog')
+      if (forbidden) return forbidden
       if (!args?.name?.trim()) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên phòng ban không được trống.' } }
       }
@@ -117,11 +124,15 @@ export function makeCatalogHandlers(db: AppDb) {
     },
 
     async deleteDepartment(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_catalog')
+      if (forbidden) return forbidden
       db.delete(departments).where(eq(departments.id, args.id)).run()
       return { ok: true, data: { ok: true } }
     },
 
     async saveEmployee(args: SaveEmployeeArgs): Promise<ApiResponse<EmployeeRow>> {
+      const forbidden = requirePermission('manage_catalog')
+      if (forbidden) return forbidden
       if (!args?.name?.trim()) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên nhân viên không được trống.' } }
       }
@@ -147,11 +158,15 @@ export function makeCatalogHandlers(db: AppDb) {
     },
 
     async deleteEmployee(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_catalog')
+      if (forbidden) return forbidden
       db.delete(employees).where(eq(employees.id, args.id)).run()
       return { ok: true, data: { ok: true } }
     },
 
     async saveGroup(args: SaveGroupArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_catalog')
+      if (forbidden) return forbidden
       if (!args?.name?.trim()) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên nhóm không được trống.' } }
       }
@@ -169,6 +184,8 @@ export function makeCatalogHandlers(db: AppDb) {
     },
 
     async deleteGroup(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_catalog')
+      if (forbidden) return forbidden
       db.update(devices)
         .set({ groupId: null })
         .where(eq(devices.groupId, args.id))

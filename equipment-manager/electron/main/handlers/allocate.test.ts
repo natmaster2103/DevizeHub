@@ -4,11 +4,14 @@ import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
 import { allocations, devices } from '../db/schema'
+import { session } from '../session'
+import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeAllocateHandlers } from './allocate'
 
 function setup() {
   const { db } = createDb(':memory:')
   runMigrations(db); seedIfEmpty(db)
+  session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
   return { db, alloc: makeAllocateHandlers(db) }
 }
 

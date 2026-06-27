@@ -2,6 +2,7 @@ import { eq, inArray } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import { devices, categories, allocations, employees, departments, requests } from '../db/schema'
 import { session } from '../session'
+import { requirePermission } from './settings'
 import type {
   ApiResponse,
   AllocateFormData,
@@ -66,6 +67,8 @@ export function makeAllocateHandlers(db: AppDb) {
     },
 
     async create(args: CreateAllocationArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('allocate')
+      if (forbidden) return forbidden
       if (!args?.deviceSku) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Chưa chọn thiết bị.' } }
       }
@@ -114,6 +117,8 @@ export function makeAllocateHandlers(db: AppDb) {
     },
 
     async quickAllocate(args: QuickAllocateArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('allocate')
+      if (forbidden) return forbidden
       if (!Array.isArray(args?.deviceSkus) || args.deviceSkus.length === 0) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Chưa chọn thiết bị.' } }
       }
