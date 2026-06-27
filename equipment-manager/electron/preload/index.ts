@@ -47,6 +47,9 @@ const api: Api = {
     saveUser: (args) => ipcRenderer.invoke(CHANNELS.settingsSaveUser, args),
     changePassword: (args) => ipcRenderer.invoke(CHANNELS.settingsChangePassword, args),
     dbInfo: () => ipcRenderer.invoke(CHANNELS.settingsDbInfo),
+    resetData: () => ipcRenderer.invoke(CHANNELS.settingsResetData),
+    saveUserPermissions: (args) => ipcRenderer.invoke(CHANNELS.settingsSaveUserPermissions, args),
+    saveUserGroups: (args) => ipcRenderer.invoke(CHANNELS.settingsSaveUserGroups, args),
   },
 }
 

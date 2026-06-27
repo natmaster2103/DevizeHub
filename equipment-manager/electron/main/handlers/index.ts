@@ -54,4 +54,7 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.settingsSaveUser, (_e, args) => auth_guard(() => settingsH.saveUser(args)))
   ipcMain.handle(CHANNELS.settingsChangePassword, (_e, args) => auth_guard(() => settingsH.changePassword(args)))
   ipcMain.handle(CHANNELS.settingsDbInfo, () => auth_guard(() => settingsH.dbInfo()))
+  ipcMain.handle(CHANNELS.settingsResetData, () => auth_guard(() => settingsH.resetData()))
+  ipcMain.handle(CHANNELS.settingsSaveUserPermissions, (_e, args) => auth_guard(() => settingsH.saveUserPermissions(args)))
+  ipcMain.handle(CHANNELS.settingsSaveUserGroups, (_e, args) => auth_guard(() => settingsH.saveUserGroups(args)))
 }
