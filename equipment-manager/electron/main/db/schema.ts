@@ -72,7 +72,7 @@ export const devices = sqliteTable('devices', {
 
 export const requests = sqliteTable('requests', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  code: text('code').notNull().unique(),
+  code: text('code').notNull(),
   departmentId: integer('department_id').references(() => departments.id),
   employeeId: integer('employee_id').references(() => employees.id),
   createdBy: integer('created_by').references(() => appUsers.id),
