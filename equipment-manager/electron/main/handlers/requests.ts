@@ -106,6 +106,7 @@ export function makeRequestHandlers(db: AppDb) {
           createdAt: requests.createdAt,
           notes: requests.notes,
           deptName: departments.name,
+          departmentId: requests.departmentId,
         })
         .from(requests)
         .leftJoin(departments, eq(requests.departmentId, departments.id))
@@ -150,6 +151,7 @@ export function makeRequestHandlers(db: AppDb) {
           id: req.id,
           code: req.code,
           department: req.deptName ?? '',
+          departmentId: req.departmentId ?? null,
           createdAt: fmtDate(req.createdAt),
           deviceCount: total,
           status: deriveStatus(total, active),
@@ -310,6 +312,13 @@ export function makeRequestHandlers(db: AppDb) {
         .all()[0]
 
       return { ok: true, data: { id: inserted.id, code: args.code.trim() } }
+    },
+
+    async update(_args: unknown): Promise<ApiResponse<{ ok: true }>> {
+      return { ok: false, error: { code: 'NOT_IMPLEMENTED', message: '' } }
+    },
+    async delete(_args: unknown): Promise<ApiResponse<{ ok: true }>> {
+      return { ok: false, error: { code: 'NOT_IMPLEMENTED', message: '' } }
     },
   }
 }

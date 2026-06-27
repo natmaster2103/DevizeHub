@@ -15,6 +15,8 @@ export const CHANNELS = {
   requestsAddDevices: 'requests.addDevices',
   requestsAvailableDevices: 'requests.availableDevices',
   requestsCreate: 'requests.create',
+  requestsUpdate: 'requests.update',
+  requestsDelete: 'requests.delete',
   allocateFormData: 'allocate.formData',
   allocateCreate: 'allocate.create',
   allocateQuick: 'allocate.quick',
@@ -34,6 +36,7 @@ export const CHANNELS = {
   settingsResetData: 'settings.resetData',
   settingsSaveUserPermissions: 'settings.saveUserPermissions',
   settingsSaveUserGroups: 'settings.saveUserGroups',
+  settingsDeleteUser: 'settings.deleteUser',
 } as const
 
 export type Role = 'admin' | 'staff'
@@ -43,6 +46,7 @@ export type Permission =
   | 'allocate'
   | 'return_device'
   | 'create_request'
+  | 'manage_requests'
   | 'edit_device'
   | 'change_status'
   | 'delete_device'
@@ -52,9 +56,9 @@ export type Permission =
   | 'view_reports'
 
 export const ALL_PERMISSIONS: Permission[] = [
-  'allocate', 'return_device', 'create_request', 'edit_device',
-  'change_status', 'delete_device', 'manage_catalog', 'manage_users',
-  'reset_data', 'view_reports',
+  'allocate', 'return_device', 'create_request', 'manage_requests',
+  'edit_device', 'change_status', 'delete_device', 'manage_catalog',
+  'manage_users', 'reset_data', 'view_reports',
 ]
 
 export interface SessionUser {
@@ -246,6 +250,7 @@ export interface RequestDetail {
   id: number
   code: string
   department: string
+  departmentId: number | null
   createdAt: string
   deviceCount: number
   status: RequestStatus
@@ -268,6 +273,15 @@ export interface CreateRequestArgs {
   notes: string | null
 }
 export interface CreateRequestResult { id: number; code: string }
+
+export interface UpdateRequestArgs {
+  id: number
+  code: string
+  departmentId: number
+  createdAt: string | null
+  notes: string | null
+}
+export interface DeleteRequestArgs { id: number }
 
 export type ApiResponse<T> =
   | { ok: true; data: T }
@@ -297,6 +311,8 @@ export interface Api {
     addDevices(args: AddToRequestArgs): Promise<ApiResponse<{ ok: true }>>
     availableDevices(): Promise<ApiResponse<AvailableDevicesResult>>
     create(args: CreateRequestArgs): Promise<ApiResponse<CreateRequestResult>>
+    update(args: UpdateRequestArgs): Promise<ApiResponse<{ ok: true }>>
+    delete(args: DeleteRequestArgs): Promise<ApiResponse<{ ok: true }>>
   }
   allocate: {
     formData(): Promise<ApiResponse<AllocateFormData>>
@@ -322,5 +338,6 @@ export interface Api {
     resetData(): Promise<ApiResponse<{ ok: true }>>
     saveUserPermissions(args: SaveUserPermissionsArgs): Promise<ApiResponse<{ ok: true }>>
     saveUserGroups(args: SaveUserGroupsArgs): Promise<ApiResponse<{ ok: true }>>
+    deleteUser(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>>
   }
 }

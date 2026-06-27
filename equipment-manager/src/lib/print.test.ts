@@ -6,6 +6,7 @@ const mockRequest: RequestDetail = {
   id: 1,
   code: 'DX-302',
   department: 'IT',
+  departmentId: null,
   createdAt: '22/06/2026',
   deviceCount: 2,
   status: 'allocated',

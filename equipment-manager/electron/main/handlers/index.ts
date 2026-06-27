@@ -40,6 +40,8 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.allocateFormData, () => auth_guard(() => allocateH.formData()))
   ipcMain.handle(CHANNELS.allocateCreate, (_e, args) => auth_guard(() => allocateH.create(args)))
   ipcMain.handle(CHANNELS.requestsCreate, (_e, args) => auth_guard(() => requestsH.create(args)))
+  ipcMain.handle(CHANNELS.requestsUpdate, (_e, args) => auth_guard(() => requestsH.update(args)))
+  ipcMain.handle(CHANNELS.requestsDelete, (_e, args) => auth_guard(() => requestsH.delete(args)))
   ipcMain.handle(CHANNELS.allocateQuick, (_e, args) => auth_guard(() => allocateH.quickAllocate(args)))
   ipcMain.handle(CHANNELS.catalogList, () => auth_guard(() => catalogH.list()))
   ipcMain.handle(CHANNELS.catalogSaveCategory, (_e, args) => auth_guard(() => catalogH.saveCategory(args)))
@@ -57,4 +59,5 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.settingsResetData, () => auth_guard(() => settingsH.resetData()))
   ipcMain.handle(CHANNELS.settingsSaveUserPermissions, (_e, args) => auth_guard(() => settingsH.saveUserPermissions(args)))
   ipcMain.handle(CHANNELS.settingsSaveUserGroups, (_e, args) => auth_guard(() => settingsH.saveUserGroups(args)))
+  ipcMain.handle(CHANNELS.settingsDeleteUser, (_e, args) => auth_guard(() => settingsH.deleteUser(args)))
 }

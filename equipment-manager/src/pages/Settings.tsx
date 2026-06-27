@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
-import { IconEdit, IconPlus } from '@/lib/icons'
+import { IconEdit, IconPlus, IconTrash } from '@/lib/icons'
 import type { AppUserRow, SaveUserArgs, Role, Permission } from '@shared/ipc'
 import { ALL_PERMISSIONS } from '@shared/ipc'
 
@@ -10,6 +10,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   allocate: 'Cấp phát thiết bị',
   return_device: 'Thu hồi thiết bị',
   create_request: 'Tạo phiếu đề nghị',
+  manage_requests: 'Quản lý phiếu đề nghị',
   edit_device: 'Sửa thông tin thiết bị',
   change_status: 'Đổi trạng thái thiết bị',
   delete_device: 'Xóa thiết bị',
@@ -217,7 +218,21 @@ function UserModal({ user, onClose }: { user: AppUserRow | null; onClose(): void
 // ── User management table ─────────────────────────────────────────────────────
 function UsersSection() {
   const { data, isLoading } = useUsers()
+  const qc = useQueryClient()
+  const { user: currentUser } = useAuth()
   const [editing, setEditing] = useState<AppUserRow | null | 'new'>(null)
+  const [deleting, setDeleting] = useState<AppUserRow | null>(null)
+  const [deleteErr, setDeleteErr] = useState('')
+
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => unwrap(api.settings.deleteUser({ id })),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'users'] })
+      setDeleting(null)
+      setDeleteErr('')
+    },
+    onError: (e) => setDeleteErr((e as Error).message),
+  })
 
   return (
     <>
@@ -239,9 +254,8 @@ function UsersSection() {
 
       {!isLoading && (
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--rad-md)', overflow: 'hidden' }}>
-          {/* Header */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr 100px 80px 36px',
+            display: 'grid', gridTemplateColumns: '1fr 1fr 100px 80px 36px 36px',
             padding: '0 14px', height: 38, alignItems: 'center',
             background: 'var(--surface-2)', borderBottom: '1px solid var(--border)',
             fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
@@ -252,51 +266,70 @@ function UsersSection() {
             <div>Vai trò</div>
             <div>Trạng thái</div>
             <div />
+            <div />
           </div>
-          {(data ?? []).map(u => (
-            <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 80px 36px', padding: '0 14px', minHeight: 46, alignItems: 'center', borderBottom: '1px solid var(--border)', fontSize: 14 }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = '')}
-            >
-              <div style={{ fontFamily: "'Consolas',monospace", fontSize: 13 }}>{u.username}</div>
-              <div style={{ fontWeight: 500 }}>{u.displayName}</div>
-              <div>
-                <span style={{
-                  display: 'inline-block', padding: '2px 8px', borderRadius: 999,
-                  fontSize: 11, fontWeight: 700, letterSpacing: '.03em',
-                  ...(u.role === 'admin'
-                    ? { background: 'rgba(124,58,237,.12)', color: '#7c3aed' }
-                    : { background: 'var(--surface-2)', color: 'var(--text-muted)' })
-                }}>
-                  {u.role === 'admin' ? 'Admin' : 'Staff'}
-                </span>
-              </div>
-              <div>
-                <span style={{
-                  display: 'inline-block', padding: '2px 8px', borderRadius: 999,
-                  fontSize: 11, fontWeight: 700,
-                  ...(u.active
-                    ? { background: 'rgba(22,163,74,.1)', color: '#16a34a' }
-                    : { background: 'rgba(107,114,128,.1)', color: 'var(--text-muted)' })
-                }}>
-                  {u.active ? 'Hoạt động' : 'Đã khóa'}
-                </span>
-              </div>
-              <button
-                title="Chỉnh sửa"
-                onClick={() => setEditing(u)}
-                style={{
-                  width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
-                  background: 'none', cursor: 'pointer', color: 'var(--text-muted)'
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+          {(data ?? []).map(u => {
+            const isSelf = u.id === currentUser?.id
+            return (
+              <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 80px 36px 36px', padding: '0 14px', minHeight: 46, alignItems: 'center', borderBottom: '1px solid var(--border)', fontSize: 14 }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
+                onMouseLeave={e => (e.currentTarget.style.background = '')}
               >
-                <IconEdit size={13} />
-              </button>
-            </div>
-          ))}
+                <div style={{ fontFamily: "'Consolas',monospace", fontSize: 13 }}>{u.username}</div>
+                <div style={{ fontWeight: 500 }}>{u.displayName}</div>
+                <div>
+                  <span style={{
+                    display: 'inline-block', padding: '2px 8px', borderRadius: 999,
+                    fontSize: 11, fontWeight: 700, letterSpacing: '.03em',
+                    ...(u.role === 'admin'
+                      ? { background: 'rgba(124,58,237,.12)', color: '#7c3aed' }
+                      : { background: 'var(--surface-2)', color: 'var(--text-muted)' })
+                  }}>
+                    {u.role === 'admin' ? 'Admin' : 'Staff'}
+                  </span>
+                </div>
+                <div>
+                  <span style={{
+                    display: 'inline-block', padding: '2px 8px', borderRadius: 999,
+                    fontSize: 11, fontWeight: 700,
+                    ...(u.active
+                      ? { background: 'rgba(22,163,74,.1)', color: '#16a34a' }
+                      : { background: 'rgba(107,114,128,.1)', color: 'var(--text-muted)' })
+                  }}>
+                    {u.active ? 'Hoạt động' : 'Đã khóa'}
+                  </span>
+                </div>
+                <button
+                  title="Chỉnh sửa"
+                  onClick={() => setEditing(u)}
+                  style={{
+                    width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                    background: 'none', cursor: 'pointer', color: 'var(--text-muted)'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+                >
+                  <IconEdit size={13} />
+                </button>
+                <button
+                  title={isSelf ? 'Không thể xóa tài khoản đang đăng nhập' : 'Xóa tài khoản'}
+                  disabled={isSelf}
+                  onClick={() => { setDeleteErr(''); setDeleting(u) }}
+                  style={{
+                    width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                    background: 'none', cursor: isSelf ? 'not-allowed' : 'pointer',
+                    color: 'var(--text-muted)', opacity: isSelf ? 0.35 : 1
+                  }}
+                  onMouseEnter={e => { if (!isSelf) { e.currentTarget.style.borderColor = '#dc2626'; e.currentTarget.style.color = '#dc2626' } }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+                >
+                  <IconTrash size={13} />
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -305,6 +338,27 @@ function UsersSection() {
           user={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {deleting !== null && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => { if (e.target === e.currentTarget && !deleteMut.isPending) { setDeleting(null); setDeleteErr('') } }}
+        >
+          <div style={{ width: 420, background: 'var(--surface)', borderRadius: 'var(--rad-lg)', boxShadow: '0 20px 60px rgba(0,0,0,.35)', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Xác nhận xóa tài khoản</div>
+            <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>
+              Bạn có chắc muốn xóa tài khoản <b>{deleting.displayName}</b> ({deleting.username})? Hành động này <b>không thể hoàn tác</b>.
+            </div>
+            {deleteErr && <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>{deleteErr}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+              <button onClick={() => { setDeleting(null); setDeleteErr('') }} disabled={deleteMut.isPending} style={{ height: 38, padding: '0 16px', border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: deleteMut.isPending ? 'not-allowed' : 'pointer' }}>Hủy</button>
+              <button onClick={() => deleteMut.mutate(deleting.id)} disabled={deleteMut.isPending} style={{ height: 38, padding: '0 18px', border: 'none', borderRadius: 'var(--rad-sm)', background: '#dc2626', color: '#fff', fontSize: 13, fontWeight: 600, cursor: deleteMut.isPending ? 'not-allowed' : 'pointer', opacity: deleteMut.isPending ? 0.7 : 1 }}>
+                {deleteMut.isPending ? 'Đang xóa…' : 'Xóa tài khoản'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

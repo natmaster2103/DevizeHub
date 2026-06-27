@@ -25,6 +25,8 @@ const api: Api = {
     addDevices: (args) => ipcRenderer.invoke(CHANNELS.requestsAddDevices, args),
     availableDevices: () => ipcRenderer.invoke(CHANNELS.requestsAvailableDevices),
     create: (args) => ipcRenderer.invoke(CHANNELS.requestsCreate, args),
+    update: (args) => ipcRenderer.invoke(CHANNELS.requestsUpdate, args),
+    delete: (args) => ipcRenderer.invoke(CHANNELS.requestsDelete, args),
   },
   allocate: {
     formData: () => ipcRenderer.invoke(CHANNELS.allocateFormData),
@@ -50,6 +52,7 @@ const api: Api = {
     resetData: () => ipcRenderer.invoke(CHANNELS.settingsResetData),
     saveUserPermissions: (args) => ipcRenderer.invoke(CHANNELS.settingsSaveUserPermissions, args),
     saveUserGroups: (args) => ipcRenderer.invoke(CHANNELS.settingsSaveUserGroups, args),
+    deleteUser: (args) => ipcRenderer.invoke(CHANNELS.settingsDeleteUser, args),
   },
 }
 
