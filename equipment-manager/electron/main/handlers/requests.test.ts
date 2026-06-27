@@ -94,6 +94,7 @@ describe('requests.update', () => {
     // @ts-expect-error testing bad input
     const res = await h.update({ id: null, code: 'X', departmentId: 1, createdAt: null, notes: null })
     expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('BAD_REQUEST')
   })
 
   it('rejects empty code', async () => {
@@ -168,6 +169,7 @@ describe('requests.delete', () => {
     // @ts-expect-error testing bad input
     const res = await h.delete({ id: null })
     expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('BAD_REQUEST')
   })
 
   it('returns NOT_FOUND for unknown id', async () => {
