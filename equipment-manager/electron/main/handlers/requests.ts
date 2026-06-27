@@ -346,25 +346,27 @@ export function makeRequestHandlers(db: AppDb) {
         return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy phiếu đề nghị.' } }
       }
 
-      const now = new Date().toISOString()
+      db.transaction((tx) => {
+        const now = new Date().toISOString()
 
-      const unreturned = db
-        .select({ deviceId: allocations.deviceId })
-        .from(allocations)
-        .where(and(eq(allocations.requestId, args.id), isNull(allocations.returnedAt)))
-        .all()
+        const unreturned = tx
+          .select({ deviceId: allocations.deviceId })
+          .from(allocations)
+          .where(and(eq(allocations.requestId, args.id), isNull(allocations.returnedAt)))
+          .all()
 
-      for (const alloc of unreturned) {
-        if (alloc.deviceId != null) {
-          db.update(devices)
-            .set({ status: 'available', updatedAt: now })
-            .where(eq(devices.id, alloc.deviceId))
-            .run()
+        for (const alloc of unreturned) {
+          if (alloc.deviceId != null) {
+            tx.update(devices)
+              .set({ status: 'available', updatedAt: now })
+              .where(eq(devices.id, alloc.deviceId))
+              .run()
+          }
         }
-      }
 
-      db.delete(allocations).where(eq(allocations.requestId, args.id)).run()
-      db.delete(requests).where(eq(requests.id, args.id)).run()
+        tx.delete(allocations).where(eq(allocations.requestId, args.id)).run()
+        tx.delete(requests).where(eq(requests.id, args.id)).run()
+      })
 
       return { ok: true, data: { ok: true } }
     },

@@ -374,12 +374,16 @@ interface ConfirmDeleteRequestDialogProps {
 
 function ConfirmDeleteRequestDialog({ request, onClose }: ConfirmDeleteRequestDialogProps) {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [err, setErr] = useState('')
   const unreturnedCount = request.lines.filter(l => !l.isReturned).length
 
   const mut = useMutation({
     mutationFn: (args: DeleteRequestArgs) => unwrap(api.requests.delete(args)),
-    onSuccess: () => navigate('/requests'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['requests'] })
+      navigate('/requests')
+    },
     onError: (e) => setErr((e as Error).message),
   })
 
