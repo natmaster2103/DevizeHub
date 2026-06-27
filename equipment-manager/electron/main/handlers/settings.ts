@@ -153,10 +153,12 @@ export function makeSettingsHandlers(db: AppDb, dbPath: string) {
       if (!args?.userId) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'userId không hợp lệ.' } }
       }
-      db.delete(userPermissions).where(eq(userPermissions.userId, args.userId)).run()
-      for (const perm of (args.permissions ?? [])) {
-        db.insert(userPermissions).values({ userId: args.userId, permission: perm }).run()
-      }
+      db.transaction((tx) => {
+        tx.delete(userPermissions).where(eq(userPermissions.userId, args.userId)).run()
+        for (const perm of (args.permissions ?? [])) {
+          tx.insert(userPermissions).values({ userId: args.userId, permission: perm }).run()
+        }
+      })
       return { ok: true, data: { ok: true } }
     },
 
@@ -166,10 +168,12 @@ export function makeSettingsHandlers(db: AppDb, dbPath: string) {
       if (!args?.userId) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'userId không hợp lệ.' } }
       }
-      db.delete(userGroups).where(eq(userGroups.userId, args.userId)).run()
-      for (const gid of (args.groupIds ?? [])) {
-        db.insert(userGroups).values({ userId: args.userId, groupId: gid }).run()
-      }
+      db.transaction((tx) => {
+        tx.delete(userGroups).where(eq(userGroups.userId, args.userId)).run()
+        for (const gid of (args.groupIds ?? [])) {
+          tx.insert(userGroups).values({ userId: args.userId, groupId: gid }).run()
+        }
+      })
       return { ok: true, data: { ok: true } }
     },
 
