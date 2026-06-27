@@ -10,7 +10,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   allocate: 'Cấp phát thiết bị',
   return_device: 'Thu hồi thiết bị',
   create_request: 'Tạo phiếu đề nghị',
-  manage_requests: 'Quản lý phiếu đề nghị',
+  manage_requests: 'Sửa/Xoá phiếu đề nghị',
   edit_device: 'Sửa thông tin thiết bị',
   change_status: 'Đổi trạng thái thiết bị',
   delete_device: 'Xóa thiết bị',
