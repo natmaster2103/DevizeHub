@@ -34,7 +34,7 @@ type Tab = 'info' | 'history'
 export default function DeviceDetail() {
   const { sku } = useParams<{ sku: string }>()
   const navigate = useNavigate()
-  const { isAdmin } = useAuth()
+  const { isAdmin, hasPermission } = useAuth()
   const queryClient = useQueryClient()
   const [showFormDialog, setShowFormDialog] = useState(false)
   const [showStatusDialog, setShowStatusDialog] = useState(false)
@@ -152,9 +152,9 @@ export default function DeviceDetail() {
           </div>
         </div>
 
-        {isAdmin && (
+        {(hasPermission('return_device') || hasPermission('change_status') || hasPermission('edit_device') || hasPermission('delete_device')) && (
           <div style={{ display: 'flex', gap: 8 }}>
-            {device.status === 'allocated' && device.activeAllocationId != null && (
+            {device.status === 'allocated' && device.activeAllocationId != null && hasPermission('return_device') && (
               <button
                 onClick={() => setShowReturnDialog(true)}
                 style={{
@@ -171,49 +171,55 @@ export default function DeviceDetail() {
                 <span>Thu hồi</span>
               </button>
             )}
-            <button
-              onClick={() => setShowStatusDialog(true)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                height: 38, padding: '0 14px',
-                border: '1px solid var(--border)', borderRadius: 'var(--rad-md)',
-                background: 'var(--surface)', color: 'var(--text)',
-                fontSize: 13, fontWeight: 600, cursor: 'pointer'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
-            >
-              <IconSwap size={15} />
-              <span>Đổi trạng thái</span>
-            </button>
-            <button
-              onClick={() => setShowFormDialog(true)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                height: 38, padding: '0 14px', border: 'none',
-                borderRadius: 'var(--rad-md)', background: 'var(--primary)',
-                color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer'
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--primary)')}
-            >
-              <IconEdit size={15} />
-              <span>Chỉnh sửa</span>
-            </button>
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                height: 38, padding: '0 14px',
-                border: '1px solid #dc2626', borderRadius: 'var(--rad-md)',
-                background: 'var(--surface)', color: '#dc2626',
-                fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(220,38,38,.08)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
-            >
-              <span>Xoá</span>
-            </button>
+            {hasPermission('change_status') && (
+              <button
+                onClick={() => setShowStatusDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  height: 38, padding: '0 14px',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-md)',
+                  background: 'var(--surface)', color: 'var(--text)',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+              >
+                <IconSwap size={15} />
+                <span>Đổi trạng thái</span>
+              </button>
+            )}
+            {hasPermission('edit_device') && (
+              <button
+                onClick={() => setShowFormDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  height: 38, padding: '0 14px', border: 'none',
+                  borderRadius: 'var(--rad-md)', background: 'var(--primary)',
+                  color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--primary)')}
+              >
+                <IconEdit size={15} />
+                <span>Chỉnh sửa</span>
+              </button>
+            )}
+            {hasPermission('delete_device') && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  height: 38, padding: '0 14px',
+                  border: '1px solid #dc2626', borderRadius: 'var(--rad-md)',
+                  background: 'var(--surface)', color: '#dc2626',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(220,38,38,.08)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
+              >
+                <span>Xoá</span>
+              </button>
+            )}
           </div>
         )}
       </div>

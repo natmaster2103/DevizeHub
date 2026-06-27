@@ -28,7 +28,7 @@ const colHelper = createColumnHelper<DeviceRow>()
 
 export default function Devices() {
   const navigate = useNavigate()
-  const { isAdmin } = useAuth()
+  const { isAdmin, hasPermission } = useAuth()
   const queryClient = useQueryClient()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | DeviceStatus>('all')
@@ -146,7 +146,7 @@ export default function Devices() {
           >
             <IconView size={15} />
           </button>
-          {isAdmin && row.original.status === 'allocated' && row.original.activeAllocationId != null && (
+          {hasPermission('return_device') && row.original.status === 'allocated' && row.original.activeAllocationId != null && (
             <button
               title="Thu hồi"
               onClick={() => setReturnDialog(row.original)}
@@ -161,35 +161,35 @@ export default function Devices() {
               <IconReturn size={15} />
             </button>
           )}
-          {isAdmin && (
-            <>
-              <button
-                title="Sửa"
-                onClick={() => setFormDialog({ mode: 'edit', device: row.original })}
-                style={{
-                  width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
-                  cursor: 'pointer', color: 'var(--text-muted)', background: 'none'
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
-              >
-                <IconEdit size={15} />
-              </button>
-              <button
-                title="Đổi trạng thái"
-                onClick={() => setStatusDialog(row.original)}
-                style={{
-                  width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
-                  cursor: 'pointer', color: 'var(--text-muted)', background: 'none'
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
-              >
-                <IconSwap size={15} />
-              </button>
-            </>
+          {hasPermission('edit_device') && (
+            <button
+              title="Sửa"
+              onClick={() => setFormDialog({ mode: 'edit', device: row.original })}
+              style={{
+                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                cursor: 'pointer', color: 'var(--text-muted)', background: 'none'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+            >
+              <IconEdit size={15} />
+            </button>
+          )}
+          {hasPermission('change_status') && (
+            <button
+              title="Đổi trạng thái"
+              onClick={() => setStatusDialog(row.original)}
+              style={{
+                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                cursor: 'pointer', color: 'var(--text-muted)', background: 'none'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+            >
+              <IconSwap size={15} />
+            </button>
           )}
         </div>
       )
@@ -251,7 +251,7 @@ export default function Devices() {
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
-        {isAdmin && (
+        {hasPermission('edit_device') && (
           <button
             onClick={() => setFormDialog({ mode: 'create' })}
             style={{

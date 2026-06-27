@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { api, unwrap } from '@/lib/api'
-import type { SessionUser, Role, LoginArgs } from '@shared/ipc'
+import type { SessionUser, Role, LoginArgs, Permission } from '@shared/ipc'
 
 interface AuthCtx {
   user: SessionUser | null
   role: Role
   isAdmin: boolean
+  permissions: string[]
+  groupIds: number[]
+  hasPermission(key: Permission): boolean
   login(args: LoginArgs): Promise<void>
   logout(): Promise<void>
   toggleRole(): void
@@ -16,6 +19,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [roleOverride, setRoleOverride] = useState<Role | null>(null)
   const role: Role = roleOverride ?? user?.role ?? 'staff'
+  const permissions = user?.permissions ?? []
+  const groupIds = user?.groupIds ?? []
+  const hasPermission = (key: Permission) => permissions.includes(key)
 
   async function login(args: LoginArgs) {
     const res = await unwrap(api.auth.login(args))
@@ -33,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function toggleRole() { setRoleOverride((r) => (role === 'admin' ? 'staff' : 'admin')) }
 
   return (
-    <Ctx.Provider value={{ user, role, isAdmin: role === 'admin', login, logout, toggleRole }}>
+    <Ctx.Provider value={{ user, role, isAdmin: role === 'admin', permissions, groupIds, hasPermission, login, logout, toggleRole }}>
       {children}
     </Ctx.Provider>
   )

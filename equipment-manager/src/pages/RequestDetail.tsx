@@ -296,7 +296,7 @@ function DeviceTable({
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { isAdmin } = useAuth()
+  const { isAdmin, hasPermission } = useAuth()
   const queryClient = useQueryClient()
 
   const requestId = id ? Number(id) : null
@@ -397,7 +397,7 @@ export default function RequestDetail() {
               <IconPrint size={14} />
               In phiếu
             </button>
-            {isAdmin && (
+            {hasPermission('create_request') && (
               <button
                 onClick={() => setShowAddDialog(true)}
                 style={{

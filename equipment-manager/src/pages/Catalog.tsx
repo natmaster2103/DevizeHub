@@ -312,7 +312,8 @@ const TABS: Array<{ key: Tab; label: string }> = [
 ]
 
 export default function Catalog() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, hasPermission } = useAuth()
+  const canManage = hasPermission('manage_catalog')
   const { data, isLoading, error } = useCatalog()
   const [tab, setTab] = useState<Tab>('categories')
 
@@ -345,10 +346,10 @@ export default function Catalog() {
       </div>
 
       {tab === 'categories' && (
-        <CategoriesTab rows={data?.categories ?? []} groups={data?.groups ?? []} isAdmin={isAdmin} />
+        <CategoriesTab rows={data?.categories ?? []} groups={data?.groups ?? []} isAdmin={canManage} />
       )}
       {tab === 'departments' && (
-        <DepartmentsTab rows={data?.departments ?? []} isAdmin={isAdmin} />
+        <DepartmentsTab rows={data?.departments ?? []} isAdmin={canManage} />
       )}
     </div>
   )
