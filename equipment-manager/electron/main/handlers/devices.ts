@@ -113,6 +113,11 @@ export function makeDeviceHandlers(db: AppDb) {
         deviceRows = deviceRows.filter((d) => d.categoryId === args.categoryId)
       }
 
+      // Apply groupId filter within the category scope; also affects counts
+      if (args.groupId != null) {
+        deviceRows = deviceRows.filter((d) => d.groupId === args.groupId)
+      }
+
       // Build counts over category-scoped set (not affected by status filter or search query)
       const counts: StatusCount[] = STATUS_KEYS.map((key) => ({
         key,

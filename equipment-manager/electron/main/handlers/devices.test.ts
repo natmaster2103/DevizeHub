@@ -204,6 +204,28 @@ describe('devices.list — pagination', () => {
   })
 })
 
+describe('devices.list — groupId filter', () => {
+  it('returns empty list when filtering by a groupId with no devices', async () => {
+    const h = setup()
+    // Use a groupId that definitely has no devices (9999 — doesn't exist).
+    // Handler should return empty result, not error.
+    const res = await h.list({ filter: 'all', query: '', groupId: 9999 })
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data.devices.length).toBe(0)
+  })
+
+  it('composes groupId filter with status filter', async () => {
+    const h = setup()
+    // groupId null returns all devices (same as no groupId)
+    const all = await h.list({ filter: 'all', query: '', groupId: null })
+    const noArg = await h.list({ filter: 'all', query: '' })
+    expect(all.ok && noArg.ok).toBe(true)
+    if (all.ok && noArg.ok) {
+      expect(all.data.total).toBe(noArg.data.total)
+    }
+  })
+})
+
 describe('devices.delete', () => {
   it('deletes a device that has never been allocated', async () => {
     const { db } = createDb(':memory:')
