@@ -46,9 +46,9 @@ Handler change: extend the `WHERE` clause in `devices.list` to filter by `device
 
 The group dropdown is hidden/disabled when no category is selected or when the selected category has no groups. It resets to "Tất cả nhóm" when the category changes.
 
-### 2.3 User–group assignment (optional scoping)
+### 2.3 User–group assignment
 
-A user can be assigned zero or more groups. This is a supporting data structure for RBAC (§3) — if a future permission like `manage_own_groups` is added, it checks both the permission key *and* whether the device's group is in the user's assigned groups.
+A user can be assigned zero or more groups. This is in scope: the assignment is stored and surfaced in the Settings modal so admins can declare which groups a user is responsible for. It is also consumed by the renderer (`useAuth().groupIds`) to support any UI that wants to highlight or pre-filter by the current user's groups (e.g. the Devices page could default-select the user's first group). No handler currently gates access on group membership — that remains a future option.
 
 ```sql
 CREATE TABLE user_groups (
@@ -191,11 +191,11 @@ const hasPermission = (key: Permission) =>
 const isAdmin = session?.role === 'admin'
 ```
 
-All UI capability gates switch from `isAdmin` to `hasPermission('...')`. The `isAdmin` field stays for cosmetic label rendering (role badge in header/settings).
+All UI capability gates switch from `isAdmin` to `hasPermission('...')`. The `isAdmin` field stays for cosmetic label rendering only: the role badge in the sidebar header and the role column in the Settings user table. No write-action gate should use `isAdmin`.
 
 ### 3.6 Settings UI — permission checklist
 
-The user-edit modal (`UserModal` in `Settings.tsx`) adds a section below the role selector: a grid of checkboxes, one per permission key, with Vietnamese labels. Admins cannot deselect permissions from their own account (`manage_users` and `manage_users` remain locked for self). The save action calls `saveUser` (existing — name/role/password/active) then `saveUserPermissions` (new — permissions array) in sequence.
+The user-edit modal (`UserModal` in `Settings.tsx`) adds a section below the role selector: a grid of checkboxes, one per permission key, with Vietnamese labels. Admins cannot deselect `manage_users` or `reset_data` from their own account (both remain locked for self to prevent lockout). The save action calls `saveUser` (existing — name/role/password/active) then `saveUserPermissions` (new — permissions array) in sequence.
 
 ---
 
