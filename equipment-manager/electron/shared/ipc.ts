@@ -17,6 +17,7 @@ export const CHANNELS = {
   requestsCreate: 'requests.create',
   requestsUpdate: 'requests.update',
   requestsDelete: 'requests.delete',
+  requestsUpdateStatus: 'requests.updateStatus',
   allocateFormData: 'allocate.formData',
   allocateCreate: 'allocate.create',
   allocateQuick: 'allocate.quick',
@@ -301,6 +302,7 @@ export interface UpdateRequestArgs {
   notes: string | null
 }
 export interface DeleteRequestArgs { id: number }
+export interface UpdateRequestStatusArgs { id: number; status: 'completed' }
 
 export type ApiResponse<T> =
   | { ok: true; data: T }
@@ -332,6 +334,7 @@ export interface Api {
     create(args: CreateRequestArgs): Promise<ApiResponse<CreateRequestResult>>
     update(args: UpdateRequestArgs): Promise<ApiResponse<{ ok: true }>>
     delete(args: DeleteRequestArgs): Promise<ApiResponse<{ ok: true }>>
+    updateStatus(args: UpdateRequestStatusArgs): Promise<ApiResponse<{ ok: true }>>
   }
   allocate: {
     formData(): Promise<ApiResponse<AllocateFormData>>

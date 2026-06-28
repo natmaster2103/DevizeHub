@@ -27,6 +27,7 @@ const api: Api = {
     create: (args) => ipcRenderer.invoke(CHANNELS.requestsCreate, args),
     update: (args) => ipcRenderer.invoke(CHANNELS.requestsUpdate, args),
     delete: (args) => ipcRenderer.invoke(CHANNELS.requestsDelete, args),
+    updateStatus: (args) => ipcRenderer.invoke(CHANNELS.requestsUpdateStatus, args),
   },
   allocate: {
     formData: () => ipcRenderer.invoke(CHANNELS.allocateFormData),

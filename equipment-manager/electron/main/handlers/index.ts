@@ -45,6 +45,7 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.requestsCreate, (_e, args) => auth_guard(() => requestsH.create(args)))
   ipcMain.handle(CHANNELS.requestsUpdate, (_e, args) => auth_guard(() => requestsH.update(args)))
   ipcMain.handle(CHANNELS.requestsDelete, (_e, args) => auth_guard(() => requestsH.delete(args)))
+  ipcMain.handle(CHANNELS.requestsUpdateStatus, (_e, args) => auth_guard(() => requestsH.updateStatus(args)))
   ipcMain.handle(CHANNELS.allocateQuick, (_e, args) => auth_guard(() => allocateH.quickAllocate(args)))
   ipcMain.handle(CHANNELS.catalogList, () => auth_guard(() => catalogH.list()))
   ipcMain.handle(CHANNELS.catalogSaveCategory, (_e, args) => auth_guard(() => catalogH.saveCategory(args)))
