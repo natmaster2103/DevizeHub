@@ -136,7 +136,7 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
   const selectedGroups = selectedCatId != null ? groups.filter((g) => g.categoryId === selectedCatId) : []
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: editingGroup ? '1fr 1fr 300px' : '1fr 1fr', gap: 16 }}>
       {/* ── Left: categories ── */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--rad-lg)', overflow: 'hidden' }}>
         {/* Header */}
@@ -193,9 +193,8 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
         )}
       </div>
 
-      {/* ── Right: groups + edit panel ── */}
-      <div style={{ display: 'flex', minWidth: 0 }}>
-        <div style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--rad-lg)', overflow: 'hidden' }}>
+      {/* ── Right: groups ── */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--rad-lg)', overflow: 'hidden' }}>
           {/* Header */}
           <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 60px' : '1fr', padding: '0 16px', height: 42, alignItems: 'center', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
             <div>
@@ -288,14 +287,13 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
           </div>
         </div>
 
-        {editingGroup && (
-          <GroupEditPanel
-            group={editingGroup}
-            templates={templates}
-            onClose={() => setEditingGroup(null)}
-          />
-        )}
-      </div>
+      {editingGroup && (
+        <GroupEditPanel
+          group={editingGroup}
+          templates={templates}
+          onClose={() => setEditingGroup(null)}
+        />
+      )}
     </div>
   )
 }

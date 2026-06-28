@@ -21,7 +21,7 @@ interface Props {
 export function GroupEditPanel({ group, templates, onClose }: Props) {
   const qc = useQueryClient()
   const [name, setName] = useState(group.name)
-  const [pendingThumbPath, setPendingThumbPath] = useState<string | null | ''>(null)
+  const [pendingThumbPath, setPendingThumbPath] = useState<string | null>(null)
   const [fieldValues, setFieldValues] = useState<Record<number, string>>({})
   const [error, setError] = useState('')
 
@@ -41,6 +41,7 @@ export function GroupEditPanel({ group, templates, onClose }: Props) {
   useEffect(() => {
     setName(group.name)
     setPendingThumbPath(null)
+    setFieldValues({})
     setError('')
   }, [group.id])
 
