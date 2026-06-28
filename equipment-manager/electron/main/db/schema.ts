@@ -11,7 +11,7 @@ export const deviceGroups = sqliteTable('device_groups', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   categoryId: integer('category_id').references(() => categories.id),
-  minStock: integer('min_stock').notNull().default(0),
+  thumbnailPath: text('thumbnail_path'),
   createdAt: text('created_at').notNull()
 })
 
@@ -95,6 +95,22 @@ export const allocations = sqliteTable('allocations', {
   notes: text('notes')
 })
 
+export const groupFieldTemplates = sqliteTable('group_field_templates', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  displayOrder: integer('display_order').notNull().default(0),
+  createdAt: text('created_at').notNull()
+})
+
+export const groupFieldValues = sqliteTable('group_field_values', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  groupId: integer('group_id').notNull().references(() => deviceGroups.id, { onDelete: 'cascade' }),
+  templateId: integer('template_id').notNull().references(() => groupFieldTemplates.id, { onDelete: 'cascade' }),
+  value: text('value').notNull().default(''),
+}, (t) => ({
+  uniq: uniqueIndex('uq_group_field').on(t.groupId, t.templateId),
+}))
+
 export const maintenanceLogs = sqliteTable('maintenance_logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   deviceId: integer('device_id').references(() => devices.id).notNull(),
@@ -107,7 +123,8 @@ export const maintenanceLogs = sqliteTable('maintenance_logs', {
 export const schema = {
   categories, deviceGroups, departments, employees, appUsers,
   userPermissions, userGroups,
-  devices, requests, allocations, maintenanceLogs
+  devices, requests, allocations, maintenanceLogs,
+  groupFieldTemplates, groupFieldValues,
 }
 
 export type Category = typeof categories.$inferSelect
@@ -122,3 +139,5 @@ export type MaintenanceLog = typeof maintenanceLogs.$inferSelect
 export type DeviceStatus = Device['status']
 export type UserPermission = typeof userPermissions.$inferSelect
 export type UserGroup = typeof userGroups.$inferSelect
+export type GroupFieldTemplate = typeof groupFieldTemplates.$inferSelect
+export type GroupFieldValue = typeof groupFieldValues.$inferSelect

@@ -29,6 +29,13 @@
       "when": 1782577729162,
       "tag": "0003_workable_brother_voodoo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1751030400000,
+      "tag": "0004_group_thumbnail_fields",
+      "breakpoints": true
     }
   ]
 }
