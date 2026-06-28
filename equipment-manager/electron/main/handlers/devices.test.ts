@@ -346,7 +346,7 @@ describe('devices.create / update — groupId', () => {
     const cats = await catalogH.list()
     if (!cats.ok) throw new Error('list failed')
     const catId = cats.data.categories[0].id
-    await catalogH.saveGroup({ name: 'TestGroup', categoryId: catId, minStock: 0 })
+    await catalogH.saveGroup({ name: 'TestGroup', categoryId: catId })
     const after = await catalogH.list()
     if (!after.ok) throw new Error('list failed')
     const groupId = after.data.groups.find((g) => g.name === 'TestGroup')!.id
@@ -371,7 +371,7 @@ describe('devices.create / update — groupId', () => {
     if (catB == null) return // need 2 categories
 
     // Create a group in catA
-    await catalogH.saveGroup({ name: 'GroupInA', categoryId: catA, minStock: 0 })
+    await catalogH.saveGroup({ name: 'GroupInA', categoryId: catA })
     const after = await catalogH.list()
     if (!after.ok) throw new Error('list failed')
     const groupId = after.data.groups.find((g) => g.name === 'GroupInA')!.id
@@ -395,7 +395,7 @@ describe('devices.create / update — groupId', () => {
     const catB = cats.data.categories[1]?.id
     if (catB == null) return // need 2 categories
 
-    await catalogH.saveGroup({ name: 'GroupA', categoryId: catA, minStock: 0 })
+    await catalogH.saveGroup({ name: 'GroupA', categoryId: catA })
     const after = await catalogH.list()
     if (!after.ok) throw new Error('list failed')
     const groupId = after.data.groups.find((g) => g.name === 'GroupA')!.id

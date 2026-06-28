@@ -9,6 +9,7 @@ export const api: Api = {
   get allocate() { return window.api.allocate },
   get catalog() { return window.api.catalog },
   get settings() { return window.api.settings },
+  get dialog() { return window.api.dialog },
 }
 
 export async function unwrap<T>(p: Promise<ApiResponse<T>>): Promise<T> {

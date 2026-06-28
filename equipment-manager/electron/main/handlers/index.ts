@@ -1,4 +1,5 @@
 import type { IpcMain } from 'electron'
+import { app } from 'electron'
 import type { AppDb } from '../db'
 import { CHANNELS } from '@shared/ipc'
 import { makeAuthHandlers } from './auth'
@@ -7,6 +8,7 @@ import { makeDashboardHandlers } from './dashboard'
 import { makeRequestHandlers } from './requests'
 import { makeAllocateHandlers } from './allocate'
 import { makeCatalogHandlers } from './catalog'
+import { makeDialogHandlers } from './dialog'
 import { makeSettingsHandlers } from './settings'
 import { session } from '../session'
 
@@ -19,7 +21,8 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   const dashboard = makeDashboardHandlers(db)
   const requestsH = makeRequestHandlers(db)
   const allocateH = makeAllocateHandlers(db)
-  const catalogH = makeCatalogHandlers(db)
+  const catalogH = makeCatalogHandlers(db, app?.getPath?.('userData'))
+  const dialogH = makeDialogHandlers()
   const settingsH = makeSettingsHandlers(db, dbPath)
 
   ipcMain.handle(CHANNELS.authLogin, (_e, args) => auth.login(args))
@@ -52,6 +55,12 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.catalogDeleteEmployee, (_e, args) => auth_guard(() => catalogH.deleteEmployee(args)))
   ipcMain.handle(CHANNELS.catalogSaveGroup, (_e, args) => auth_guard(() => catalogH.saveGroup(args)))
   ipcMain.handle(CHANNELS.catalogDeleteGroup, (_e, args) => auth_guard(() => catalogH.deleteGroup(args)))
+  ipcMain.handle(CHANNELS.catalogListGroupTemplates, () => auth_guard(() => catalogH.listGroupTemplates()))
+  ipcMain.handle(CHANNELS.catalogSaveGroupTemplate, (_e, args) => auth_guard(() => catalogH.saveGroupTemplate(args)))
+  ipcMain.handle(CHANNELS.catalogDeleteGroupTemplate, (_e, args) => auth_guard(() => catalogH.deleteGroupTemplate(args)))
+  ipcMain.handle(CHANNELS.catalogGetGroupDetail, (_e, args) => auth_guard(() => catalogH.getGroupDetail(args)))
+  ipcMain.handle(CHANNELS.catalogSaveGroupDetail, (_e, args) => auth_guard(() => catalogH.saveGroupDetail(args)))
+  ipcMain.handle(CHANNELS.dialogOpenFile, (_e, args) => dialogH.openFile(args))
   ipcMain.handle(CHANNELS.settingsListUsers, () => auth_guard(() => settingsH.listUsers()))
   ipcMain.handle(CHANNELS.settingsSaveUser, (_e, args) => auth_guard(() => settingsH.saveUser(args)))
   ipcMain.handle(CHANNELS.settingsChangePassword, (_e, args) => auth_guard(() => settingsH.changePassword(args)))

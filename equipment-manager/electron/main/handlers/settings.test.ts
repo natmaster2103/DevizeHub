@@ -109,6 +109,19 @@ describe('settings.saveUserPermissions', () => {
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.error.code).toBe('FORBIDDEN')
   })
+
+  it('allows an admin-role caller even with no explicit permission rows', async () => {
+    // Repro for DBs seeded before the user_permissions table existed: the
+    // admin has role 'admin' but no permission rows, so its session perms are [].
+    const db = freshDb()
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: [], groupIds: [] }
+    const h = makeSettingsHandlers(db, ':memory:')
+    const listRes = await h.listUsers()
+    if (!listRes.ok) return
+    const staff = listRes.data.find((u) => u.role === 'staff' && u.active)!
+    const res = await h.saveUserPermissions({ userId: staff.id, permissions: ['allocate'] })
+    expect(res.ok).toBe(true)
+  })
 })
 
 describe('settings.saveUserGroups', () => {
@@ -132,7 +145,7 @@ describe('settings.saveUserGroups', () => {
     const catList = await catalogH.list()
     if (!catList.ok) return
     const catId = catList.data.categories[0].id
-    await catalogH.saveGroup({ name: 'Test Grp', categoryId: catId, minStock: 0 })
+    await catalogH.saveGroup({ name: 'Test Grp', categoryId: catId })
     const updated = await catalogH.list()
     if (!updated.ok) return
     const grpId = updated.data.groups.find((g) => g.name === 'Test Grp')!.id

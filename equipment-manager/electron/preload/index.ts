@@ -43,6 +43,14 @@ const api: Api = {
     deleteEmployee: (args) => ipcRenderer.invoke(CHANNELS.catalogDeleteEmployee, args),
     saveGroup: (args) => ipcRenderer.invoke(CHANNELS.catalogSaveGroup, args),
     deleteGroup: (args) => ipcRenderer.invoke(CHANNELS.catalogDeleteGroup, args),
+    listGroupTemplates: () => ipcRenderer.invoke(CHANNELS.catalogListGroupTemplates),
+    saveGroupTemplate: (args) => ipcRenderer.invoke(CHANNELS.catalogSaveGroupTemplate, args),
+    deleteGroupTemplate: (args) => ipcRenderer.invoke(CHANNELS.catalogDeleteGroupTemplate, args),
+    getGroupDetail: (args) => ipcRenderer.invoke(CHANNELS.catalogGetGroupDetail, args),
+    saveGroupDetail: (args) => ipcRenderer.invoke(CHANNELS.catalogSaveGroupDetail, args),
+  },
+  dialog: {
+    openFile: (args) => ipcRenderer.invoke(CHANNELS.dialogOpenFile, args),
   },
   settings: {
     listUsers: () => ipcRenderer.invoke(CHANNELS.settingsListUsers),
