@@ -98,5 +98,15 @@ Toolbar layout sau khi thêm (trái → phải):
 
 - Tất cả label user-facing bằng tiếng Việt.
 - Permission `manage_requests` gate cho `updateStatus` handler và nút frontend.
-- Không cần migration data phức tạp — cột `status DEFAULT 'pending'` tự fill cho các phiếu cũ (chấp nhận được vì phiếu cũ có thể đang active).
+- Migration cần backfill data cho phiếu cũ (không thể chỉ dùng DEFAULT 'pending'):
+  ```sql
+  -- Backfill: phiếu có active allocation → 'allocated'
+  UPDATE requests SET status = 'allocated'
+  WHERE id IN (SELECT DISTINCT request_id FROM allocations WHERE returned_at IS NULL AND request_id IS NOT NULL);
+  -- Backfill: phiếu có allocation nhưng tất cả đã trả → 'completed'
+  UPDATE requests SET status = 'completed'
+  WHERE id IN (SELECT DISTINCT request_id FROM allocations WHERE request_id IS NOT NULL)
+  AND id NOT IN (SELECT DISTINCT request_id FROM allocations WHERE returned_at IS NULL AND request_id IS NOT NULL);
+  ```
+  Phiếu không có allocation nào giữ nguyên DEFAULT 'pending'.
 - Test: `npx vitest run electron/main/handlers/requests.test.ts`
