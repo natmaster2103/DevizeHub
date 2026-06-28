@@ -36,6 +36,20 @@
       "when": 1751030400000,
       "tag": "0004_group_thumbnail_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1782635472288,
+      "tag": "0005_overrated_hardball",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1782720000000,
+      "tag": "0006_request_status",
+      "breakpoints": true
     }
   ]
 }

@@ -77,7 +77,8 @@ export const requests = sqliteTable('requests', {
   employeeId: integer('employee_id').references(() => employees.id),
   createdBy: integer('created_by').references(() => appUsers.id),
   createdAt: text('created_at').notNull(),
-  notes: text('notes')
+  notes: text('notes'),
+  status: text('status').notNull().default('pending')
 })
 
 export const allocations = sqliteTable('allocations', {
