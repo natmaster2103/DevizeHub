@@ -219,11 +219,15 @@ export function makeCatalogHandlers(db: AppDb, userDataPath?: string) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Tên trường không được để trống.' } }
       }
       if (args.id) {
-        db.update(groupFieldTemplates)
+        const updated = db.update(groupFieldTemplates)
           .set({ name: args.name.trim(), displayOrder: args.displayOrder ?? 0 })
           .where(eq(groupFieldTemplates.id, args.id))
-          .run()
-        return { ok: true, data: { id: args.id, name: args.name.trim(), displayOrder: args.displayOrder ?? 0 } }
+          .returning()
+          .all()[0]
+        if (!updated) {
+          return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy trường.' } }
+        }
+        return { ok: true, data: { id: updated.id, name: updated.name, displayOrder: updated.displayOrder } }
       }
       const result = db.insert(groupFieldTemplates)
         .values({ name: args.name.trim(), displayOrder: args.displayOrder ?? 0, createdAt: now() })
@@ -277,13 +281,17 @@ export function makeCatalogHandlers(db: AppDb, userDataPath?: string) {
         if (group.thumbnailPath) { try { unlinkSync(group.thumbnailPath) } catch {} }
         db.update(deviceGroups).set({ thumbnailPath: null }).where(eq(deviceGroups.id, args.groupId)).run()
       } else if (args.thumbnailSourcePath !== null && userDataPath) {
-        const thumbDir = join(userDataPath, 'thumbnails')
-        if (!existsSync(thumbDir)) mkdirSync(thumbDir, { recursive: true })
-        const ext = extname(args.thumbnailSourcePath)
-        const destPath = join(thumbDir, `${args.groupId}-${Date.now()}${ext}`)
-        copyFileSync(args.thumbnailSourcePath, destPath)
-        if (group.thumbnailPath) { try { unlinkSync(group.thumbnailPath) } catch {} }
-        db.update(deviceGroups).set({ thumbnailPath: destPath }).where(eq(deviceGroups.id, args.groupId)).run()
+        try {
+          const thumbDir = join(userDataPath, 'thumbnails')
+          if (!existsSync(thumbDir)) mkdirSync(thumbDir, { recursive: true })
+          const ext = extname(args.thumbnailSourcePath)
+          const destPath = join(thumbDir, `${args.groupId}-${Date.now()}${ext}`)
+          copyFileSync(args.thumbnailSourcePath, destPath)
+          if (group.thumbnailPath) { try { unlinkSync(group.thumbnailPath) } catch {} }
+          db.update(deviceGroups).set({ thumbnailPath: destPath }).where(eq(deviceGroups.id, args.groupId)).run()
+        } catch {
+          return { ok: false, error: { code: 'IO_ERROR', message: 'Không thể sao chép ảnh.' } }
+        }
       }
 
       for (const field of args.fields) {

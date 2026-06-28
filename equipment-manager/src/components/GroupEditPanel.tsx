@@ -126,11 +126,11 @@ export function GroupEditPanel({ group, templates, onClose }: Props) {
               <img
                 src={`file://${currentThumbPath}`}
                 alt=""
-                style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)' }}
+                style={{ width: 80, height: 80, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)' }}
               />
             ) : (
               <div style={{
-                width: 64, height: 64, borderRadius: 6, border: '1px dashed var(--border)',
+                width: 80, height: 80, borderRadius: 6, border: '1px dashed var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 22, color: 'var(--text-muted)',
               }}>🖼</div>

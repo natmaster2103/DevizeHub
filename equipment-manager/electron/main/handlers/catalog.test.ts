@@ -166,6 +166,13 @@ describe('catalog.saveGroupTemplate', () => {
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.error.code).toBe('BAD_REQUEST')
   })
+
+  it('returns NOT_FOUND when updating nonexistent template', async () => {
+    const { catalog } = setup()
+    const res = await catalog.saveGroupTemplate({ id: 99999, name: 'Ghost' })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('NOT_FOUND')
+  })
 })
 
 describe('catalog.deleteGroupTemplate', () => {

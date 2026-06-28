@@ -96,6 +96,8 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
   // Template management state
   const [newTemplateName, setNewTemplateName] = useState('')
   const [confirmDeleteTemplateId, setConfirmDeleteTemplateId] = useState<number | null>(null)
+  const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null)
+  const [editingTemplateName, setEditingTemplateName] = useState('')
 
   const { data: templateData } = useQuery({
     queryKey: ['groupTemplates'],
@@ -131,6 +133,11 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
   const deleteTemplateMut = useMutation({
     mutationFn: (id: number) => unwrap(api.catalog.deleteGroupTemplate({ id })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['groupTemplates'] }),
+  })
+  const renameTemplateMut = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) =>
+      unwrap(api.catalog.saveGroupTemplate({ id, name })),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['groupTemplates'] }); setEditingTemplateId(null) },
   })
 
   const selectedGroups = selectedCatId != null ? groups.filter((g) => g.categoryId === selectedCatId) : []
@@ -254,9 +261,35 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
             </div>
             {templates.map(t => (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
-                <span style={{ fontSize: 13 }}>{t.name}</span>
-                {isAdmin && (
-                  <IconBtn title="Xóa" onClick={() => setConfirmDeleteTemplateId(t.id)}><IconTrash size={12} /></IconBtn>
+                {editingTemplateId === t.id ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
+                    <input
+                      value={editingTemplateName}
+                      onChange={e => setEditingTemplateName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && editingTemplateName.trim()) renameTemplateMut.mutate({ id: t.id, name: editingTemplateName.trim() })
+                        if (e.key === 'Escape') setEditingTemplateId(null)
+                      }}
+                      autoFocus
+                      style={{ flex: 1, height: 28, padding: '0 8px', border: '1px solid var(--primary)', borderRadius: 'var(--rad-sm)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, outline: 'none' }}
+                    />
+                    <button onClick={() => { if (editingTemplateName.trim()) renameTemplateMut.mutate({ id: t.id, name: editingTemplateName.trim() }) }}
+                      style={{ height: 28, padding: '0 8px', border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✓</button>
+                    <button onClick={() => setEditingTemplateId(null)}
+                      style={{ height: 28, padding: '0 8px', border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>✕</button>
+                  </div>
+                ) : (
+                  <span
+                    style={{ fontSize: 13, cursor: isAdmin ? 'pointer' : 'default', flex: 1 }}
+                    onDoubleClick={() => { if (isAdmin) { setEditingTemplateId(t.id); setEditingTemplateName(t.name) } }}
+                    title={isAdmin ? 'Double-click để đổi tên' : undefined}
+                  >{t.name}</span>
+                )}
+                {isAdmin && editingTemplateId !== t.id && (
+                  <>
+                    <IconBtn title="Đổi tên" onClick={() => { setEditingTemplateId(t.id); setEditingTemplateName(t.name) }}><IconEdit size={12} /></IconBtn>
+                    <IconBtn title="Xóa" onClick={() => setConfirmDeleteTemplateId(t.id)}><IconTrash size={12} /></IconBtn>
+                  </>
                 )}
               </div>
             ))}
