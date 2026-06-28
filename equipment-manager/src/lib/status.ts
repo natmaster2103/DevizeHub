@@ -19,13 +19,13 @@ export function badgeStyle(status: DeviceStatus) { return COLORS[status] }
 
 export function requestStatusLabel(s: RequestStatus): string {
   if (s === 'pending') return 'Chưa cấp phát'
-  if (s === 'allocated') return 'Đang trang bị'
+  if (s === 'allocated') return 'Đang cho mượn'
   return 'Hoàn tất'
 }
 
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   pending: 'Chưa cấp phát',
-  allocated: 'Đang trang bị',
+  allocated: 'Đang cho mượn',
   completed: 'Hoàn tất',
 }
 

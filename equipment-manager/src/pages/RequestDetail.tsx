@@ -7,7 +7,7 @@ import { REQUEST_STATUS_LABELS, requestBadgeStyle } from '@/lib/status'
 import { IconBack, IconReturn, IconPlus, IconSearch, IconPrint, IconEdit, IconTrash } from '@/lib/icons'
 import { printRequest } from '@/lib/print'
 import { api, unwrap } from '@/lib/api'
-import type { RequestDeviceLine, RequestDetail, ReturnDeviceArgs, AddToRequestArgs, UpdateRequestArgs, DeleteRequestArgs } from '@shared/ipc'
+import type { RequestDeviceLine, RequestDetail, ReturnDeviceArgs, AddToRequestArgs, UpdateRequestArgs, DeleteRequestArgs, UpdateRequestStatusArgs } from '@shared/ipc'
 import { ReturnDialog } from '@/components/ReturnDialog'
 
 // ── X button icon ────────────────────────────────────────────────────────────
@@ -563,6 +563,14 @@ export default function RequestDetail() {
     }
   })
 
+  const statusMutation = useMutation({
+    mutationFn: (args: UpdateRequestStatusArgs) => unwrap(api.requests.updateStatus(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] })
+      queryClient.invalidateQueries({ queryKey: ['requests'] })
+    }
+  })
+
   if (isLoading) {
     return <div style={{ padding: 24, color: 'var(--text-muted)', fontSize: 14 }}>Đang tải…</div>
   }
@@ -663,6 +671,25 @@ export default function RequestDetail() {
                   Xoá
                 </button>
               </>
+            )}
+
+            {hasPermission('manage_requests') && data.status === 'allocated' && (
+              <button
+                onClick={() => statusMutation.mutate({ id: data.id, status: 'completed' })}
+                disabled={statusMutation.isPending}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 14px',
+                  border: 'none', borderRadius: 'var(--rad-sm)',
+                  background: '#16a34a', color: '#fff',
+                  fontSize: 13, fontWeight: 600,
+                  cursor: statusMutation.isPending ? 'not-allowed' : 'pointer',
+                  opacity: statusMutation.isPending ? 0.7 : 1,
+                }}
+              >
+                <span style={{ fontSize: 14, lineHeight: 1 }}>✓</span>
+                {statusMutation.isPending ? 'Đang lưu…' : 'Đánh dấu hoàn tất'}
+              </button>
             )}
 
             {hasPermission('create_request') && (
@@ -784,6 +811,16 @@ export default function RequestDetail() {
           boxShadow: '0 4px 12px rgba(0,0,0,.2)'
         }}>
           {(addMutation.error as Error).message}
+        </div>
+      )}
+      {statusMutation.isError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          background: '#dc2626', color: '#fff', padding: '12px 18px',
+          borderRadius: 'var(--rad-md)', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,.2)'
+        }}>
+          {(statusMutation.error as Error).message}
         </div>
       )}
     </div>
