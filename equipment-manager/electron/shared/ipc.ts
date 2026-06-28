@@ -29,6 +29,12 @@ export const CHANNELS = {
   catalogDeleteEmployee: 'catalog.deleteEmployee',
   catalogSaveGroup: 'catalog.saveGroup',
   catalogDeleteGroup: 'catalog.deleteGroup',
+  catalogListGroupTemplates: 'catalog.listGroupTemplates',
+  catalogSaveGroupTemplate: 'catalog.saveGroupTemplate',
+  catalogDeleteGroupTemplate: 'catalog.deleteGroupTemplate',
+  catalogGetGroupDetail: 'catalog.getGroupDetail',
+  catalogSaveGroupDetail: 'catalog.saveGroupDetail',
+  dialogOpenFile: 'dialog.openFile',
   settingsListUsers: 'settings.listUsers',
   settingsSaveUser: 'settings.saveUser',
   settingsChangePassword: 'settings.changePassword',
@@ -171,7 +177,7 @@ export interface DashboardSummary {
 export interface CategoryRow { id: number; name: string; minStock: number }
 export interface DepartmentRow { id: number; name: string }
 export interface EmployeeRow { id: number; name: string; employeeCode: string; departmentId: number | null; departmentName: string }
-export interface GroupRow { id: number; name: string; categoryId: number; categoryName: string; minStock: number }
+export interface GroupRow { id: number; name: string; categoryId: number; categoryName: string; thumbnailPath: string | null }
 export interface CatalogListResult {
   categories: CategoryRow[]
   departments: DepartmentRow[]
@@ -181,8 +187,21 @@ export interface CatalogListResult {
 export interface SaveCategoryArgs { id?: number; name: string; minStock: number }
 export interface SaveDepartmentArgs { id?: number; name: string }
 export interface SaveEmployeeArgs { id?: number; name: string; employeeCode: string; departmentId: number | null }
-export interface SaveGroupArgs { id?: number; name: string; categoryId: number; minStock: number }
+export interface SaveGroupArgs { id?: number; name: string; categoryId: number }
 export interface DeleteEntityArgs { id: number }
+export interface GroupFieldTemplate { id: number; name: string; displayOrder: number }
+export interface GroupDetailResult {
+  thumbnailPath: string | null
+  fields: Array<{ templateId: number; name: string; value: string }>
+}
+export interface SaveGroupTemplateArgs { id?: number; name: string; displayOrder?: number }
+export interface SaveGroupDetailArgs {
+  groupId: number
+  thumbnailSourcePath: string | null  // null = không đổi; '' = xóa; string path = file mới
+  fields: Array<{ templateId: number; value: string }>
+}
+export interface OpenFileResult { canceled: boolean; filePath: string | null }
+
 export interface SaveUserPermissionsArgs { userId: number; permissions: Permission[] }
 export interface SaveUserGroupsArgs { userId: number; groupIds: number[] }
 
@@ -329,6 +348,14 @@ export interface Api {
     deleteEmployee(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>>
     saveGroup(args: SaveGroupArgs): Promise<ApiResponse<{ ok: true }>>
     deleteGroup(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>>
+    listGroupTemplates(): Promise<ApiResponse<{ templates: GroupFieldTemplate[] }>>
+    saveGroupTemplate(args: SaveGroupTemplateArgs): Promise<ApiResponse<GroupFieldTemplate>>
+    deleteGroupTemplate(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>>
+    getGroupDetail(args: { groupId: number }): Promise<ApiResponse<GroupDetailResult>>
+    saveGroupDetail(args: SaveGroupDetailArgs): Promise<ApiResponse<{ ok: true }>>
+  }
+  dialog: {
+    openFile(args: { filters?: Array<{ name: string; extensions: string[] }> }): Promise<ApiResponse<OpenFileResult>>
   }
   settings: {
     listUsers(): Promise<ApiResponse<AppUserRow[]>>
