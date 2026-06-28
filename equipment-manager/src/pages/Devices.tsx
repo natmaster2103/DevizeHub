@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -52,6 +52,11 @@ export default function Devices() {
   })
   const categories = catalogData?.categories ?? []
   const groupsForCategory = (catalogData?.groups ?? []).filter((g) => g.categoryId === categoryFilter)
+
+  const groupById = useMemo(
+    () => new Map((catalogData?.groups ?? []).map(g => [g.id, g])),
+    [catalogData?.groups]
+  )
 
   const [formDialog, setFormDialog] = useState<
     null | { mode: 'create' } | { mode: 'edit'; device: DeviceRow }
@@ -113,7 +118,15 @@ export default function Devices() {
         <div style={{ lineHeight: 1.3 }}>
           <div style={{ color: 'var(--text)', fontWeight: 500 }}>{row.original.category || '—'}</div>
           {row.original.group && (
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{row.original.group}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {(() => {
+                const grp = row.original.groupId ? groupById.get(row.original.groupId) : null
+                return grp?.thumbnailPath ? (
+                  <img src={`file://${grp.thumbnailPath}`} alt="" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                ) : null
+              })()}
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{row.original.group}</div>
+            </div>
           )}
         </div>
       )
