@@ -249,3 +249,71 @@ describe('requests.delete', () => {
     expect(devRow?.status).toBe('available')
   })
 })
+
+// ── status flow: pending → allocated → completed ─────────────────────────────
+describe('requests status flow', () => {
+  beforeEach(() => { session.current = ADMIN_SESSION })
+
+  async function setup() {
+    const db = freshDb()
+    const h = makeRequestHandlers(db)
+    const deptId = db.select({ id: departments.id }).from(departments).all()[0].id
+    const r = await h.create({ code: 'ST-001', departmentId: deptId, createdAt: null, notes: null })
+    if (!r.ok) throw new Error('setup failed')
+    return { db, h, reqId: r.data.id }
+  }
+
+  it('new request is pending', async () => {
+    const { h, reqId } = await setup()
+    const got = await h.get({ id: reqId })
+    expect(got.ok).toBe(true)
+    if (got.ok) expect(got.data.status).toBe('pending')
+  })
+
+  it('addDevices moves pending → allocated', async () => {
+    const { db, h, reqId } = await setup()
+    // make a device available
+    const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    const added = await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku] })
+    expect(added.ok).toBe(true)
+    const got = await h.get({ id: reqId })
+    if (got.ok) expect(got.data.status).toBe('allocated')
+  })
+
+  it('updateStatus moves allocated → completed', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku] })
+    const upd = await h.updateStatus({ id: reqId, status: 'completed' })
+    expect(upd.ok).toBe(true)
+    const got = await h.get({ id: reqId })
+    if (got.ok) expect(got.data.status).toBe('completed')
+  })
+
+  it('updateStatus rejects when request is still pending', async () => {
+    const { h, reqId } = await setup()
+    const upd = await h.updateStatus({ id: reqId, status: 'completed' })
+    expect(upd.ok).toBe(false)
+    if (!upd.ok) expect(upd.error.code).toBe('CONFLICT')
+  })
+
+  it('addDevices does not overwrite completed', async () => {
+    const { db, h, reqId } = await setup()
+    const avail = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()
+    await h.addDevices({ requestId: reqId, deviceSkus: [avail[0].sku] })
+    await h.updateStatus({ id: reqId, status: 'completed' })
+    await h.addDevices({ requestId: reqId, deviceSkus: [avail[1].sku] })
+    const got = await h.get({ id: reqId })
+    if (got.ok) expect(got.data.status).toBe('completed')
+  })
+
+  it('staff without manage_requests cannot updateStatus', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku] })
+    session.current = STAFF_SESSION
+    const upd = await h.updateStatus({ id: reqId, status: 'completed' })
+    expect(upd.ok).toBe(false)
+    if (!upd.ok) expect(upd.error.code).toBe('FORBIDDEN')
+  })
+})

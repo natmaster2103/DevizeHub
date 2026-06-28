@@ -19,6 +19,7 @@ import type {
   CreateRequestResult,
   UpdateRequestArgs,
   DeleteRequestArgs,
+  UpdateRequestStatusArgs,
 } from '@shared/ipc'
 
 function fmtDate(iso: string): string {
@@ -29,11 +30,6 @@ function fmtDate(iso: string): string {
   return `${dd}/${mm}/${yyyy}`
 }
 
-function deriveStatus(totalLines: number, activeLines: number): RequestStatus {
-  if (totalLines === 0) return 'pending'
-  if (activeLines > 0) return 'allocated'
-  return 'completed'
-}
 
 export function makeRequestHandlers(db: AppDb) {
   return {
@@ -44,6 +40,7 @@ export function makeRequestHandlers(db: AppDb) {
           code: requests.code,
           createdAt: requests.createdAt,
           notes: requests.notes,
+          status: requests.status,
           deptName: departments.name,
         })
         .from(requests)
@@ -51,37 +48,26 @@ export function makeRequestHandlers(db: AppDb) {
         .all()
 
       const allAllocs = db
-        .select({
-          requestId: allocations.requestId,
-          returnedAt: allocations.returnedAt,
-        })
+        .select({ requestId: allocations.requestId })
         .from(allocations)
         .all()
 
-      const totalByReq = new Map<number, number>()
-      const activeByReq = new Map<number, number>()
+      const countByReq = new Map<number, number>()
       for (const a of allAllocs) {
         if (a.requestId == null) continue
-        totalByReq.set(a.requestId, (totalByReq.get(a.requestId) ?? 0) + 1)
-        if (a.returnedAt === null) {
-          activeByReq.set(a.requestId, (activeByReq.get(a.requestId) ?? 0) + 1)
-        }
+        countByReq.set(a.requestId, (countByReq.get(a.requestId) ?? 0) + 1)
       }
 
       const q = (args.query ?? '').toLowerCase().trim()
 
-      let rows: RequestRow[] = allRequests.map((r) => {
-        const total = totalByReq.get(r.id) ?? 0
-        const active = activeByReq.get(r.id) ?? 0
-        return {
-          id: r.id,
-          code: r.code,
-          department: r.deptName ?? '',
-          createdAt: fmtDate(r.createdAt),
-          deviceCount: total,
-          status: deriveStatus(total, active),
-        }
-      })
+      let rows: RequestRow[] = allRequests.map((r) => ({
+        id: r.id,
+        code: r.code,
+        department: r.deptName ?? '',
+        createdAt: fmtDate(r.createdAt),
+        deviceCount: countByReq.get(r.id) ?? 0,
+        status: r.status as RequestStatus,
+      }))
 
       if (q) {
         rows = rows.filter(
@@ -107,6 +93,7 @@ export function makeRequestHandlers(db: AppDb) {
           code: requests.code,
           createdAt: requests.createdAt,
           notes: requests.notes,
+          status: requests.status,
           deptName: departments.name,
           departmentId: requests.departmentId,
         })
@@ -145,7 +132,6 @@ export function makeRequestHandlers(db: AppDb) {
       }))
 
       const total = lines.length
-      const active = lines.filter((l) => l.returnedAt === null).length
 
       return {
         ok: true,
@@ -156,7 +142,7 @@ export function makeRequestHandlers(db: AppDb) {
           departmentId: req.departmentId ?? null,
           createdAt: fmtDate(req.createdAt),
           deviceCount: total,
-          status: deriveStatus(total, active),
+          status: req.status as RequestStatus,
           notes: req.notes ?? null,
           lines: deviceLines,
         },
@@ -254,6 +240,12 @@ export function makeRequestHandlers(db: AppDb) {
           .set({ status: 'allocated', updatedAt: now })
           .where(eq(devices.id, dev.id))
           .run()
+      }
+
+      const cur = db.select({ status: requests.status }).from(requests)
+        .where(eq(requests.id, req.id)).all()[0]
+      if (cur && cur.status === 'pending') {
+        db.update(requests).set({ status: 'allocated' }).where(eq(requests.id, req.id)).run()
       }
 
       return { ok: true, data: { ok: true } }
@@ -368,6 +360,29 @@ export function makeRequestHandlers(db: AppDb) {
         tx.delete(requests).where(eq(requests.id, args.id)).run()
       })
 
+      return { ok: true, data: { ok: true } }
+    },
+
+    async updateStatus(args: UpdateRequestStatusArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_requests')
+      if (forbidden) return forbidden
+      if (!args?.id || typeof args.id !== 'number') {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'ID phiếu không hợp lệ.' } }
+      }
+      if (args.status !== 'completed') {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Trạng thái không hợp lệ.' } }
+      }
+
+      const existing = db.select({ id: requests.id, status: requests.status })
+        .from(requests).where(eq(requests.id, args.id)).all()[0]
+      if (!existing) {
+        return { ok: false, error: { code: 'NOT_FOUND', message: 'Không tìm thấy phiếu đề nghị.' } }
+      }
+      if (existing.status !== 'allocated') {
+        return { ok: false, error: { code: 'CONFLICT', message: 'Chỉ có thể hoàn tất phiếu đang cho mượn.' } }
+      }
+
+      db.update(requests).set({ status: 'completed' }).where(eq(requests.id, args.id)).run()
       return { ok: true, data: { ok: true } }
     },
   }
