@@ -1,4 +1,5 @@
 import { eq, isNull, and } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/sqlite-core'
 import type { AppDb } from '../db'
 import { requirePermission } from './settings'
 import {
@@ -9,6 +10,7 @@ import {
   departments,
   maintenanceLogs,
   deviceGroups,
+  appUsers,
 } from '../db/schema'
 import type {
   ApiResponse,
@@ -42,6 +44,13 @@ function fmtDate(iso: string): string {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
   const yyyy = d.getUTCFullYear()
   return `${dd}/${mm}/${yyyy}`
+}
+
+function fmtTime(iso: string): string {
+  const d = new Date(iso)
+  const hh = String(d.getUTCHours()).padStart(2, '0')
+  const mi = String(d.getUTCMinutes()).padStart(2, '0')
+  return `${hh}:${mi}`
 }
 
 function parseBorrowerName(notes: string | null): string | null {
@@ -79,6 +88,7 @@ export function makeDeviceHandlers(db: AppDb) {
           deviceId: allocations.deviceId,
           holderName: employees.name,
           deptName: departments.name,
+          borrowerName: allocations.borrowerName,
           notes: allocations.notes,
         })
         .from(allocations)
@@ -101,7 +111,7 @@ export function makeDeviceHandlers(db: AppDb) {
           status: r.status as DeviceStatus,
           serialNumber: r.serialNumber ?? null,
           notes: r.notes ?? null,
-          holder: alloc?.holderName ?? parseBorrowerName(alloc?.notes ?? null),
+          holder: alloc?.borrowerName ?? alloc?.holderName ?? parseBorrowerName(alloc?.notes ?? null),
           department: alloc?.deptName ?? null,
           activeAllocationId: alloc?.allocationId ?? null,
           group: r.groupName ?? null,
@@ -192,6 +202,7 @@ export function makeDeviceHandlers(db: AppDb) {
           allocationId: allocations.id,
           holderName: employees.name,
           deptName: departments.name,
+          borrowerName: allocations.borrowerName,
           notes: allocations.notes,
         })
         .from(allocations)
@@ -200,7 +211,7 @@ export function makeDeviceHandlers(db: AppDb) {
         .where(and(eq(allocations.deviceId, deviceRow.id), isNull(allocations.returnedAt)))
         .all()[0]
 
-      const holderName = activeAlloc?.holderName ?? parseBorrowerName(activeAlloc?.notes ?? null)
+      const holderName = activeAlloc?.borrowerName ?? activeAlloc?.holderName ?? parseBorrowerName(activeAlloc?.notes ?? null)
       const deptName = activeAlloc?.deptName ?? null
 
       const deviceRowOut: DeviceDetailResult['device'] = {
@@ -231,36 +242,57 @@ export function makeDeviceHandlers(db: AppDb) {
       ]
 
       // Build history from allocations
+      const issuer = alias(appUsers, 'issuer')
+      const returner = alias(appUsers, 'returner')
       const allocRows = db
         .select({
           issuedAt: allocations.issuedAt,
           returnedAt: allocations.returnedAt,
           holderName: employees.name,
           deptName: departments.name,
+          borrowerName: allocations.borrowerName,
           notes: allocations.notes,
+          issuerName: issuer.displayName,
+          returnerName: returner.displayName,
+          dueDate: allocations.dueDate,
+          conditionOut: allocations.conditionOut,
+          conditionIn: allocations.conditionIn,
         })
         .from(allocations)
         .leftJoin(employees, eq(allocations.employeeId, employees.id))
         .leftJoin(departments, eq(allocations.departmentId, departments.id))
+        .leftJoin(issuer, eq(allocations.issuedBy, issuer.id))
+        .leftJoin(returner, eq(allocations.returnedBy, returner.id))
         .where(and(eq(allocations.deviceId, deviceRow.id)))
         .all()
 
       const historyEntries: DeviceHistoryEntry[] = []
 
       for (const a of allocRows) {
-        const name = a.holderName ?? parseBorrowerName(a.notes) ?? ''
+        const name = a.borrowerName ?? a.holderName ?? parseBorrowerName(a.notes) ?? 'Người dùng'
+        const allocDetail: DeviceHistoryEntry['detail'] = []
+        if (a.deptName) allocDetail.push({ label: 'Phòng ban', value: a.deptName })
+        if (a.dueDate) allocDetail.push({ label: 'Hạn trả', value: fmtDate(a.dueDate) })
+        if (a.conditionOut) allocDetail.push({ label: 'Tình trạng', value: a.conditionOut })
         historyEntries.push({
           type: 'allocate',
           title: 'Bàn giao',
-          sub: `${name}${a.deptName ? ' – ' + a.deptName : ''}`,
           date: fmtDate(a.issuedAt),
+          time: fmtTime(a.issuedAt),
+          flow: { from: a.issuerName ?? 'Kho', to: name },
+          detail: allocDetail,
         })
         if (a.returnedAt) {
+          const retDetail: DeviceHistoryEntry['detail'] = []
+          if (a.deptName) retDetail.push({ label: 'Phòng ban', value: a.deptName })
+          if (a.conditionIn) retDetail.push({ label: 'Tình trạng', value: a.conditionIn })
           historyEntries.push({
             type: 'return',
             title: 'Thu hồi',
-            sub: `${name}${a.deptName ? ' – ' + a.deptName : ''}`,
             date: fmtDate(a.returnedAt),
+            time: fmtTime(a.returnedAt),
+            flow: { from: name, to: a.returnerName ?? 'Kho' },
+            detail: retDetail,
           })
         }
       }
@@ -273,11 +305,16 @@ export function makeDeviceHandlers(db: AppDb) {
         .all()
 
       for (const m of maintRows) {
+        const maintDetail: DeviceHistoryEntry['detail'] = []
+        if (m.description) maintDetail.push({ label: 'Nội dung', value: m.description })
+        if (m.performedBy) maintDetail.push({ label: 'Người thực hiện', value: m.performedBy })
+        if (m.completedAt) maintDetail.push({ label: 'Hoàn tất', value: `${fmtDate(m.completedAt)} ${fmtTime(m.completedAt)}` })
         historyEntries.push({
           type: 'maintenance',
           title: 'Bảo trì',
-          sub: m.description ?? '',
           date: fmtDate(m.startedAt),
+          time: fmtTime(m.startedAt),
+          detail: maintDetail,
         })
       }
 
@@ -285,8 +322,9 @@ export function makeDeviceHandlers(db: AppDb) {
       historyEntries.push({
         type: 'create',
         title: 'Nhập kho',
-        sub: deviceRow.name,
         date: fmtDate(deviceRow.createdAt),
+        time: fmtTime(deviceRow.createdAt),
+        detail: [{ label: 'Thiết bị', value: deviceRow.name }],
       })
 
       // Sort desc by date string (DD/MM/YYYY → need to parse for sort)

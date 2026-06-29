@@ -411,6 +411,44 @@ describe('devices.create / update — groupId', () => {
   })
 })
 
+describe('devices.get — borrower_name column in history', () => {
+  it('uses borrower_name column for the allocate entry flow.to', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    db.insert(allocations).values({
+      deviceId: dev!.id,
+      issuedAt: new Date().toISOString(),
+      borrowerName: 'Người Mượn Cột',
+      notes: null,
+    }).run()
+    const res = await h.get({ sku: 'LAP-0024' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const allocateEntry = res.data.history.find(e => e.type === 'allocate')
+    expect(allocateEntry!.flow!.to).toBe('Người Mượn Cột')
+  })
+
+  it('falls back to legacy notes when borrower_name is null', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    db.insert(allocations).values({
+      deviceId: dev!.id,
+      issuedAt: new Date().toISOString(),
+      borrowerName: null,
+      notes: 'Người mượn: Legacy Cũ',
+    }).run()
+    const res = await h.get({ sku: 'LAP-0024' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const allocateEntry = res.data.history.find(e => e.type === 'allocate')
+    expect(allocateEntry!.flow!.to).toBe('Legacy Cũ')
+  })
+})
+
 describe('devices — permission enforcement', () => {
   it('rejects devices.create for session without edit_device', async () => {
     const { db } = createDb(':memory:')
