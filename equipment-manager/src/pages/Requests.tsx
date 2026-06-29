@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { REQUEST_STATUS_LABELS, requestBadgeStyle } from '@/lib/status'
 import { IconSearch, IconPlus } from '@/lib/icons'
 import { api, unwrap } from '@/lib/api'
-import type { RequestRow, CreateRequestArgs } from '@shared/ipc'
+import type { RequestRow, CreateRequestArgs, RequestStatus } from '@shared/ipc'
 
 // ── Badge ─────────────────────────────────────────────────────────────────────
 function RequestBadge({ status }: { status: RequestRow['status'] }) {
@@ -245,13 +245,28 @@ function CreateRequestDialog({ onClose }: CreateRequestDialogProps) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 const COL = '140px 1fr 1fr 60px 130px 36px'
+const STATUS_FILTER_KEYS: Array<'all' | RequestStatus> = ['all', 'pending', 'allocated', 'completed']
+const STATUS_FILTER_LABELS: Record<'all' | RequestStatus, string> = {
+  all: 'Tất cả',
+  pending: 'Chưa cấp phát',
+  allocated: 'Đang cho mượn',
+  completed: 'Hoàn tất',
+}
 
 export default function Requests() {
   const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const [query, setQuery] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | RequestStatus>('all')
+  const [deptFilter, setDeptFilter] = useState<string>('')
+  const { data: departments } = useDepartments()
   const { data, isLoading, error } = useRequests(query)
+  const filtered = (data?.requests ?? []).filter(r => {
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false
+    if (deptFilter && r.department !== deptFilter) return false
+    return true
+  })
 
   return (
     <div style={{ maxWidth: 1240, margin: '0 auto' }}>
@@ -278,6 +293,21 @@ export default function Requests() {
             onBlur={e => (e.target.style.borderColor = 'var(--border)')}
           />
         </div>
+        <select
+          value={deptFilter}
+          onChange={e => setDeptFilter(e.target.value)}
+          style={{
+            height: 40, padding: '0 12px', flexShrink: 0,
+            border: '1px solid var(--border)', borderRadius: 'var(--rad-md)',
+            background: 'var(--surface)', color: 'var(--text)',
+            fontSize: 14, outline: 'none', appearance: 'auto' as any,
+          }}
+        >
+          <option value="">Tất cả phòng ban</option>
+          {(departments ?? []).map(d => (
+            <option key={d.id} value={d.name}>{d.name}</option>
+          ))}
+        </select>
         {hasPermission('create_request') && (
           <button
             onClick={() => setShowCreate(true)}
@@ -296,6 +326,29 @@ export default function Requests() {
             Tạo phiếu đề nghị
           </button>
         )}
+      </div>
+
+      {/* Status filter tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        {STATUS_FILTER_KEYS.map(key => {
+          const isActive = statusFilter === key
+          return (
+            <div
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              style={{
+                display: 'inline-flex', alignItems: 'center',
+                padding: '5px 12px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', whiteSpace: 'nowrap',
+                background: isActive ? 'var(--primary)' : 'var(--surface-2)',
+                color: isActive ? '#fff' : 'var(--text-muted)',
+                border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`
+              }}
+            >
+              {STATUS_FILTER_LABELS[key]}
+            </div>
+          )
+        })}
       </div>
 
       {/* Loading / error */}
@@ -329,12 +382,12 @@ export default function Requests() {
           </div>
 
           {/* Rows */}
-          {(data?.requests ?? []).length === 0 && (
+          {filtered.length === 0 && (
             <div style={{ padding: '32px 18px', fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>
               Không có phiếu đề nghị nào.
             </div>
           )}
-          {(data?.requests ?? []).map(req => (
+          {filtered.map(req => (
             <div
               key={req.id}
               onClick={() => navigate(`/requests/${req.id}`)}
@@ -366,7 +419,7 @@ export default function Requests() {
 
           {/* Footer */}
           <div style={{ padding: '12px 18px', fontSize: 13, color: 'var(--text-muted)' }}>
-            {data?.requests.length ?? 0} phiếu đề nghị
+            {filtered.length} phiếu đề nghị
           </div>
         </div>
       )}
