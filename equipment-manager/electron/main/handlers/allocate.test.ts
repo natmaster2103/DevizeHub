@@ -37,6 +37,19 @@ describe('allocate.quickAllocate', () => {
     expect(alc!.departmentId).toBeNull()
     expect(alc!.requestId).toBeNull()
   })
+
+  it('stores borrowerName in the column and leaves notes free-text only', async () => {
+    const { db, alloc } = setup()
+    await alloc.quickAllocate({
+      deviceSkus: ['LAP-0024'], departmentId: null,
+      borrowerName: 'Nguyễn Văn Lẻ', requestId: null, notes: 'giao gấp',
+    })
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    const alc = db.select().from(allocations)
+      .where(and(eq(allocations.deviceId, dev!.id), isNull(allocations.returnedAt))).get()
+    expect(alc!.borrowerName).toBe('Nguyễn Văn Lẻ')
+    expect(alc!.notes).toBe('giao gấp')
+  })
 })
 
 describe('allocations.borrower_name column', () => {

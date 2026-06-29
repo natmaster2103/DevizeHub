@@ -144,7 +144,6 @@ export function makeAllocateHandlers(db: AppDb) {
       }
 
       const now = new Date().toISOString()
-      const notesStr = `Người mượn: ${args.borrowerName.trim()}${args.notes ? '\n' + args.notes : ''}`
 
       for (const dev of devs) {
         db.insert(allocations)
@@ -155,7 +154,8 @@ export function makeAllocateHandlers(db: AppDb) {
             departmentId: args.departmentId ?? null,
             issuedBy: session.current?.id ?? null,
             issuedAt: now,
-            notes: notesStr,
+            borrowerName: args.borrowerName.trim(),
+            notes: args.notes || null,
           })
           .run()
 
