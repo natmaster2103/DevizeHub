@@ -43,6 +43,20 @@
       "when": 1782720000000,
       "tag": "0006_request_status",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1782739722918,
+      "tag": "0007_busy_smiling_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1782747306295,
+      "tag": "0008_damp_gamma_corps",
+      "breakpoints": true
     }
   ]
 }

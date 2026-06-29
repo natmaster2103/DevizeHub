@@ -91,9 +91,11 @@ export const allocations = sqliteTable('allocations', {
   issuedAt: text('issued_at').notNull(),
   dueDate: text('due_date'),
   returnedAt: text('returned_at'),
+  returnedBy: integer('returned_by').references(() => appUsers.id),
   conditionOut: text('condition_out'),
   conditionIn: text('condition_in'),
-  notes: text('notes')
+  notes: text('notes'),
+  borrowerName: text('borrower_name')
 })
 
 export const groupFieldTemplates = sqliteTable('group_field_templates', {

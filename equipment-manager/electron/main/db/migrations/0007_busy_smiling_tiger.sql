@@ -1,0 +1,1 @@
+ALTER TABLE `allocations` ADD `returned_by` integer REFERENCES app_users(id);

@@ -38,3 +38,18 @@ describe('allocate.quickAllocate', () => {
     expect(alc!.requestId).toBeNull()
   })
 })
+
+describe('allocations.borrower_name column', () => {
+  it('persists and reads back a borrower_name value', () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    db.insert(allocations).values({
+      deviceId: dev!.id,
+      issuedAt: new Date().toISOString(),
+      borrowerName: 'Người Test',
+    }).run()
+    const row = db.select().from(allocations).where(eq(allocations.deviceId, dev!.id)).get()
+    expect(row!.borrowerName).toBe('Người Test')
+  })
+})
