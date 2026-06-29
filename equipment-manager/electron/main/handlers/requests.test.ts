@@ -333,4 +333,19 @@ describe('requests status flow', () => {
     expect(upd.ok).toBe(false)
     if (!upd.ok) expect(upd.error.code).toBe('FORBIDDEN')
   })
+
+  it('returns recipient from the borrower_name column', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    db.insert(allocations).values({
+      requestId: reqId,
+      deviceId: dev.id,
+      issuedAt: new Date().toISOString(),
+      borrowerName: 'Cột Recipient',
+      notes: null,
+    }).run()
+    const got = await h.get({ id: reqId })
+    expect(got.ok).toBe(true)
+    if (got.ok) expect(got.data.lines[0].recipient).toBe('Cột Recipient')
+  })
 })

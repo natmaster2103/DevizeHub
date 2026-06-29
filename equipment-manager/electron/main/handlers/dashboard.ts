@@ -37,6 +37,7 @@ export function makeDashboardHandlers(db: AppDb) {
           issuedAt: allocations.issuedAt,
           returnedAt: allocations.returnedAt,
           employeeName: employees.name,
+          borrowerName: allocations.borrowerName,
           allocNotes: allocations.notes,
           deptId: allocations.departmentId,
           deptName: departments.name,
@@ -127,7 +128,7 @@ export function makeDashboardHandlers(db: AppDb) {
               deviceSku: deviceSkuById.get(a.deviceId) ?? '',
               name: deviceById.get(a.deviceId) ?? '',
               datetime: fmtDateTime(a.issuedAt),
-              borrowerName: a.employeeName ?? parseBorrowerFromNotes(a.allocNotes),
+              borrowerName: a.borrowerName ?? a.employeeName ?? parseBorrowerFromNotes(a.allocNotes),
               lender: lenderName,
               returnable: true,
             }
@@ -158,7 +159,7 @@ export function makeDashboardHandlers(db: AppDb) {
             deviceSku: deviceSkuById.get(a.deviceId) ?? '',
             name: deviceById.get(a.deviceId) ?? '',
             datetime: fmtDateTime(a.issuedAt),
-            borrowerName: a.employeeName ?? parseBorrowerFromNotes(a.allocNotes),
+            borrowerName: a.borrowerName ?? a.employeeName ?? parseBorrowerFromNotes(a.allocNotes),
             lender: lenderName,
             returnable: true,
           }

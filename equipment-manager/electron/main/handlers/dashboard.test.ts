@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
-import { requests } from '../db/schema'
+import { requests, allocations, devices } from '../db/schema'
 import { session } from '../session'
 import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeDashboardHandlers } from './dashboard'
@@ -176,5 +176,24 @@ describe('dashboard.summary', () => {
     expect(looseCards.length).toBe(1)
     expect(looseCards[0].count).toBe(0)
     expect(looseCards[0].looseItems).toEqual([])
+  })
+
+  it('shows borrowerName from the column for a loose allocation', async () => {
+    const { db, dash } = setup()
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    db.insert(allocations).values({
+      deviceId: dev!.id,
+      requestId: null,
+      issuedAt: new Date().toISOString(),
+      borrowerName: 'Cột Lẻ',
+      notes: null,
+    }).run()
+    const res = await dash.summary()
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const loose = res.data.deptCards.find(c => c.kind === 'loose')
+    const item = loose?.looseItems?.find(i => i.deviceSku === 'LAP-0024')
+    expect(item).toBeDefined()
+    expect(item!.borrowerName).toBe('Cột Lẻ')
   })
 })

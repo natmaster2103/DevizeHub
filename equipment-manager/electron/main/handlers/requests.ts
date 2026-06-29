@@ -120,6 +120,7 @@ export function makeRequestHandlers(db: AppDb) {
           deviceName: devices.name,
           categoryName: categories.name,
           recipientName: employees.name,
+          borrowerName: allocations.borrowerName,
           allocNotes: allocations.notes,
         })
         .from(allocations)
@@ -134,7 +135,7 @@ export function makeRequestHandlers(db: AppDb) {
         deviceSku: l.deviceSku ?? '',
         deviceName: l.deviceName ?? '',
         category: l.categoryName ?? '',
-        recipient: l.recipientName ?? parseBorrowerFromNotes(l.allocNotes),
+        recipient: l.borrowerName ?? l.recipientName ?? parseBorrowerFromNotes(l.allocNotes),
         isReturned: l.returnedAt !== null,
       }))
 
