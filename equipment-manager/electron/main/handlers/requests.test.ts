@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
@@ -332,6 +332,18 @@ describe('requests status flow', () => {
     const upd = await h.updateStatus({ id: reqId, status: 'completed' })
     expect(upd.ok).toBe(false)
     if (!upd.ok) expect(upd.error.code).toBe('FORBIDDEN')
+  })
+
+  it('stores borrowerName in the column, not in notes', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku], borrowerName: 'Trần Thị B' })
+    const d = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, dev.sku)).get()
+    const alc = db.select().from(allocations)
+      .where(and(eq(allocations.deviceId, d!.id), eq(allocations.requestId, reqId)))
+      .get()
+    expect(alc!.borrowerName).toBe('Trần Thị B')
+    expect(alc!.notes).toBeNull()
   })
 
   it('returns recipient from the borrower_name column', async () => {

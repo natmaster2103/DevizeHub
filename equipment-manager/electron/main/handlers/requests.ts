@@ -234,7 +234,6 @@ export function makeRequestHandlers(db: AppDb) {
 
       const now = new Date().toISOString()
       const issuedBy = session.current?.id ?? null
-      const notesStr = `Người mượn: ${args.borrowerName.trim()}`
 
       for (const dev of availableDevs) {
         db.insert(allocations)
@@ -245,7 +244,8 @@ export function makeRequestHandlers(db: AppDb) {
             departmentId: req.departmentId ?? null,
             issuedBy,
             issuedAt: now,
-            notes: notesStr,
+            borrowerName: args.borrowerName.trim(),
+            notes: null,
           })
           .run()
 
