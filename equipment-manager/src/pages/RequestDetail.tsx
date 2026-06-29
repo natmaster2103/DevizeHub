@@ -692,7 +692,7 @@ export default function RequestDetail() {
               </button>
             )}
 
-            {hasPermission('create_request') && (
+            {hasPermission('create_request') && data.status !== 'completed' && (
               <button
                 onClick={() => setShowAddDialog(true)}
                 style={{
