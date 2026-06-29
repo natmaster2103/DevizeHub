@@ -181,7 +181,7 @@ git commit -m "feat: add device create/update/changeStatus IPC types and channel
 - Consumes: `DeviceCreateArgs`, `DeviceUpdateArgs`, `DeviceChangeStatusArgs`, `DeviceRow.categoryId`, `DeviceListArgs.page/pageSize` từ Task 1
 - Produces: `makeDeviceHandlers(db).create/update/changeStatus` — dùng ở `index.ts`
 
-- [ ] **Step 1: Viết failing tests trước**
+- **Step 1: Viết failing tests trước**
 
 Mở `electron/main/handlers/devices.test.ts`. Thêm vào cuối file:
 

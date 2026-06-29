@@ -112,8 +112,10 @@ export interface DeviceListResult {
 export interface DeviceHistoryEntry {
   type: 'allocate' | 'return' | 'maintenance' | 'create'
   title: string
-  sub: string
-  date: string
+  date: string                                   // DD/MM/YYYY
+  time: string                                   // HH:MM ('' nếu không rõ giờ)
+  flow?: { from: string; to: string }            // người bàn giao → người nhận (cấp phát/thu hồi)
+  detail: { label: string; value: string }[]     // các dòng thông tin chi tiết khác
 }
 export interface DeviceInfoField { key: string; value: string; isStatus?: boolean }
 export interface DeviceDetailResult {
@@ -281,7 +283,7 @@ export interface RequestGetArgs { id: number }
 
 export interface ReturnDeviceArgs { allocationId: number; condition: string; notes: string }
 
-export interface AddToRequestArgs { requestId: number; deviceSkus: string[] }
+export interface AddToRequestArgs { requestId: number; deviceSkus: string[]; borrowerName: string }
 
 export interface AvailableDeviceRow { sku: string; name: string; category: string }
 export interface AvailableDevicesResult { devices: AvailableDeviceRow[] }

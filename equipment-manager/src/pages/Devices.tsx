@@ -99,6 +99,21 @@ export default function Devices() {
   })
 
   const columns = [
+    colHelper.display({
+      id: 'group',
+      header: ' ',
+      cell: ({ row }) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {(() => {
+            const grp = row.original.groupId ? groupById.get(row.original.groupId) : null
+            return grp?.thumbnailPath ? (
+              <img src={`file://${grp.thumbnailPath}`} alt="" style={{ width: 64, height: 64, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+            ) : null
+          })()}
+
+        </div>
+      )
+    }),
     colHelper.accessor('sku', {
       header: 'SKU',
       cell: info => (
@@ -111,26 +126,20 @@ export default function Devices() {
       header: 'Tên thiết bị',
       cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span>
     }),
+
     colHelper.display({
       id: 'categoryGroup',
-      header: 'Loại / Nhóm',
+      header: 'DANH MỤC',
       cell: ({ row }) => (
+
         <div style={{ lineHeight: 1.3 }}>
           <div style={{ color: 'var(--text)', fontWeight: 500 }}>{row.original.category || '—'}</div>
-          {row.original.group && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {(() => {
-                const grp = row.original.groupId ? groupById.get(row.original.groupId) : null
-                return grp?.thumbnailPath ? (
-                  <img src={`file://${grp.thumbnailPath}`} alt="" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
-                ) : null
-              })()}
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{row.original.group}</div>
-            </div>
-          )}
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{row.original.group}</div>
         </div>
+
       )
     }),
+
     colHelper.accessor('status', {
       header: 'Trạng thái',
       cell: info => <StatusBadge status={info.getValue()} />
@@ -350,7 +359,7 @@ export default function Devices() {
               key={hg.id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '120px 1.6fr 1.1fr 150px 1.2fr 130px',
+                gridTemplateColumns: '84px  0.5fr 1.6fr 100px 1fr   1fr 130px',
                 padding: '0 18px', height: 44, alignItems: 'center',
                 background: 'var(--surface-2)', borderBottom: '1px solid var(--border)',
                 fontSize: 12, fontWeight: 700, color: 'var(--text-muted)',
@@ -371,7 +380,7 @@ export default function Devices() {
               key={row.id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '120px 1.6fr 1.1fr 150px 1.2fr 130px',
+                gridTemplateColumns: '84px 0.5fr 1.6fr 100px 1fr 1fr 130px',
                 padding: '0 18px', minHeight: 52, alignItems: 'center',
                 borderBottom: '1px solid var(--border)', fontSize: 14
               }}

@@ -144,10 +144,8 @@ export function makeDashboardHandlers(db: AppDb) {
         }
       }
 
-      // Show a card for every department; busiest (most active allocations) first,
-      // then alphabetically so empty departments sort to the end deterministically.
       const sortedGroups = [...deptGroups.values()]
-        .sort((a, b) => b.activeCount - a.activeCount || a.deptName.localeCompare(b.deptName))
+        .sort((a, b) => a.deptName.localeCompare(b.deptName))
 
       // Active allocations with no request link → loose ("Cấp phát lẻ") card
       const looseItems: DeptCardItem[] = allocRows

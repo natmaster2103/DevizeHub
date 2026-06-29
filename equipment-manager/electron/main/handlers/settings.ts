@@ -26,11 +26,14 @@ import type {
   DbInfoResult,
   Role,
   Permission,
+  DeleteEntityArgs,
 } from '@shared/ipc'
 
 function now() { return new Date().toISOString() }
 
 export function requirePermission(perm: Permission): ApiResponse<never> | null {
+  // Admin role always has full access, regardless of explicit permission rows.
+  if (session.current?.role === 'admin') return null
   if (!session.current?.permissions?.includes(perm)) {
     return { ok: false, error: { code: 'FORBIDDEN', message: 'Bạn không có quyền thực hiện thao tác này.' } }
   }
@@ -173,6 +176,33 @@ export function makeSettingsHandlers(db: AppDb, dbPath: string) {
         for (const gid of (args.groupIds ?? [])) {
           tx.insert(userGroups).values({ userId: args.userId, groupId: gid }).run()
         }
+      })
+      return { ok: true, data: { ok: true } }
+    },
+
+    async deleteUser(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>> {
+      const forbidden = requirePermission('manage_users')
+      if (forbidden) return forbidden
+      if (!args?.id) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'userId không hợp lệ.' } }
+      }
+      if (session.current?.id === args.id) {
+        return { ok: false, error: { code: 'FORBIDDEN', message: 'Không thể xóa tài khoản đang đăng nhập.' } }
+      }
+      const target = db.select().from(appUsers).where(eq(appUsers.id, args.id)).all()[0]
+      if (!target) {
+        return { ok: false, error: { code: 'NOT_FOUND', message: 'Tài khoản không tồn tại.' } }
+      }
+      if (target.role === 'admin') {
+        const adminCount = db.select().from(appUsers).where(eq(appUsers.role, 'admin')).all().length
+        if (adminCount <= 1) {
+          return { ok: false, error: { code: 'FORBIDDEN', message: 'Không thể xóa quản trị viên duy nhất.' } }
+        }
+      }
+      db.transaction((tx) => {
+        tx.delete(userPermissions).where(eq(userPermissions.userId, args.id)).run()
+        tx.delete(userGroups).where(eq(userGroups.userId, args.id)).run()
+        tx.delete(appUsers).where(eq(appUsers.id, args.id)).run()
       })
       return { ok: true, data: { ok: true } }
     },

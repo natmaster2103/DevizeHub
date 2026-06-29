@@ -21,7 +21,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const role: Role = roleOverride ?? user?.role ?? 'staff'
   const permissions = user?.permissions ?? []
   const groupIds = user?.groupIds ?? []
-  const hasPermission = (key: Permission) => permissions.includes(key)
+  // Admin role always has full access, regardless of explicit permission rows.
+  const hasPermission = (key: Permission) => role === 'admin' || permissions.includes(key)
 
   async function login(args: LoginArgs) {
     const res = await unwrap(api.auth.login(args))

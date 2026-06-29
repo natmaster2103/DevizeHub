@@ -4,7 +4,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { useDevice } from '@/hooks/useDevice'
 import { useAuth } from '@/context/AuthContext'
 import { StatusBadge } from '@/components/StatusBadge'
-import { IconBox, IconBack, IconSwap, IconEdit, IconCheck, IconDown, IconWrench, IconReturn } from '@/lib/icons'
+import { IconBox, IconBack, IconSwap, IconEdit, IconReturn, IconClock, IconChevronDown } from '@/lib/icons'
 import { DeviceFormDialog } from '@/components/DeviceFormDialog'
 import { ChangeStatusDialog } from '@/components/ChangeStatusDialog'
 import { ReturnDialog } from '@/components/ReturnDialog'
@@ -14,19 +14,11 @@ import type { DeviceHistoryEntry, ReturnDeviceArgs } from '@shared/ipc'
 
 type HistType = DeviceHistoryEntry['type']
 
-const HIST_STYLE: Record<HistType, { color: string; tint: string }> = {
-  allocate:    { color: '#2563eb', tint: 'rgba(37,99,235,.14)' },
-  return:      { color: '#16a34a', tint: 'rgba(22,163,74,.14)' },
-  maintenance: { color: '#ca8a04', tint: 'rgba(202,138,4,.18)' },
-  create:      { color: '#64748b', tint: 'rgba(100,116,139,.18)' }
-}
-
-function HistIcon({ type }: { type: HistType }) {
-  const size = 18
-  if (type === 'allocate')    return <IconCheck size={size} />
-  if (type === 'return')      return <IconDown size={size} />
-  if (type === 'maintenance') return <IconWrench size={size} />
-  return <IconBox size={size} />
+const HIST_STYLE: Record<HistType, { color: string }> = {
+  allocate: { color: '#2563eb' },
+  return: { color: '#16a34a' },
+  maintenance: { color: '#ca8a04' },
+  create: { color: '#64748b' }
 }
 
 type Tab = 'info' | 'history'
@@ -40,6 +32,9 @@ export default function DeviceDetail() {
   const [showStatusDialog, setShowStatusDialog] = useState(false)
   const [showReturnDialog, setShowReturnDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set())
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const { data: catalogData } = useQuery({
     queryKey: ['catalog'],
@@ -104,6 +99,32 @@ export default function DeviceDetail() {
 
   const { device, info, history } = data
 
+  // DD/MM/YYYY → YYYY-MM-DD để so sánh với <input type="date">
+  const toISO = (d: string) => { const [dd, mm, yyyy] = d.split('/'); return `${yyyy}-${mm}-${dd}` }
+  const isFiltered = dateFrom !== '' || dateTo !== ''
+  const filteredHistory = history.filter(e => {
+    const iso = toISO(e.date)
+    if (dateFrom && iso < dateFrom) return false
+    if (dateTo && iso > dateTo) return false
+    return true
+  })
+
+  const groups = filteredHistory.reduce<{ date: string; entries: typeof history }[]>((acc, entry) => {
+    const last = acc[acc.length - 1]
+    if (last?.date === entry.date) last.entries.push(entry)
+    else acc.push({ date: entry.date, entries: [entry] })
+    return acc
+  }, [])
+
+  const toggleDate = (date: string) => {
+    setCollapsedDates(prev => {
+      const next = new Set(prev)
+      if (next.has(date)) next.delete(date)
+      else next.add(date)
+      return next
+    })
+  }
+
   const tabStyle = (t: Tab) => ({
     padding: '10px 2px', marginRight: 22, fontSize: 14, fontWeight: 600,
     cursor: 'pointer', borderBottom: `2px solid ${tab === t ? 'var(--primary)' : 'transparent'}`,
@@ -112,7 +133,7 @@ export default function DeviceDetail() {
   })
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ maxWidth: tab === 'history' ? 1280 : 1000, margin: '0 auto', transition: 'max-width .2s' }}>
       {/* Back link */}
       <div
         onClick={() => navigate('/devices')}
@@ -262,30 +283,156 @@ export default function DeviceDetail() {
       {tab === 'history' && (
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--border)',
-          borderRadius: 'var(--rad-lg)', padding: '24px 24px 8px'
+          borderRadius: 'var(--rad-lg)', padding: '16px 24px'
         }}>
-          {history.map((entry, idx) => {
-            const { color, tint } = HIST_STYLE[entry.type]
-            const isLast = idx === history.length - 1
+          {/* Date filter toolbar */}
+          {history.length > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid var(--border)'
+            }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-muted)' }}>Lọc theo ngày</span>
+              <input
+                type="date" value={dateFrom} max={dateTo || undefined}
+                onChange={e => setDateFrom(e.target.value)}
+                style={{
+                  height: 32, padding: '0 8px', fontSize: 13,
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'var(--surface)', color: 'var(--text)'
+                }}
+              />
+              <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>→</span>
+              <input
+                type="date" value={dateTo} min={dateFrom || undefined}
+                onChange={e => setDateTo(e.target.value)}
+                style={{
+                  height: 32, padding: '0 8px', fontSize: 13,
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'var(--surface)', color: 'var(--text)'
+                }}
+              />
+              {isFiltered && (
+                <>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                    {filteredHistory.length} sự kiện
+                  </span>
+                  <button
+                    onClick={() => { setDateFrom(''); setDateTo('') }}
+                    style={{
+                      height: 32, padding: '0 12px', fontSize: 12.5, fontWeight: 600,
+                      border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                      background: 'var(--surface)', color: 'var(--text-muted)', cursor: 'pointer'
+                    }}
+                  >
+                    Xoá lọc
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {history.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: 8, padding: '32px 0', color: 'var(--text-muted)'
+            }}>
+              <IconClock size={32} />
+              <span style={{ fontSize: 14 }}>Chưa có lịch sử</span>
+            </div>
+          ) : groups.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: 8, padding: '32px 0', color: 'var(--text-muted)'
+            }}>
+              <IconClock size={32} />
+              <span style={{ fontSize: 14 }}>Không có lịch sử trong khoảng đã chọn</span>
+            </div>
+          ) : groups.map(group => {
+            const isCollapsed = collapsedDates.has(group.date)
             return (
-              <div key={idx} style={{ display: 'flex', gap: 14, paddingBottom: 20, position: 'relative' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{
-                    width: 34, height: 34, flexShrink: 0, borderRadius: 'var(--rad-md)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: tint, color, zIndex: 1
+              <div key={group.date} style={{ marginBottom: 18 }}>
+                {/* Day header */}
+                <div
+                  onClick={() => toggleDate(group.date)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    cursor: 'pointer', padding: '6px 0', marginBottom: isCollapsed ? 0 : 12,
+                    userSelect: 'none'
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {group.date}
+                  </span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
+                    background: 'var(--surface-2)', border: '1px solid var(--border)',
+                    borderRadius: 999, padding: '1px 8px'
                   }}>
-                    <HistIcon type={entry.type} />
+                    {group.entries.length}
+                  </span>
+                  <div style={{
+                    color: 'var(--text-muted)', display: 'flex', alignItems: 'center',
+                    transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.15s'
+                  }}>
+                    <IconChevronDown size={13} />
                   </div>
-                  {!isLast && (
-                    <div style={{ flex: 1, width: 2, background: 'var(--border)', marginTop: 4 }} />
-                  )}
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                 </div>
-                <div style={{ paddingTop: 4 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.35 }}>{entry.title}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{entry.sub}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{entry.date}</div>
-                </div>
+
+                {/* Entries — compact text log, in columns to fill the width */}
+                {!isCollapsed && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                    columnGap: 28, rowGap: 2
+                  }}>
+                    {group.entries.map((entry, idx) => {
+                      const { color } = HIST_STYLE[entry.type]
+                      return (
+                        <div key={idx} style={{
+                          display: 'flex', gap: 10, alignItems: 'baseline',
+                          padding: '7px 0', borderBottom: '1px dashed var(--border)'
+                        }}>
+                          {/* time */}
+                          <span style={{
+                            fontFamily: "'Consolas',monospace", fontSize: 12,
+                            color: 'var(--text-muted)', flexShrink: 0, width: 38, textAlign: 'right'
+                          }}>
+                            {entry.time}
+                          </span>
+                          {/* colored type dot */}
+                          <span style={{
+                            width: 7, height: 7, borderRadius: '50%', background: color,
+                            flexShrink: 0, alignSelf: 'center'
+                          }} />
+                          {/* title + flow + inline detail */}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color }}>{entry.title}</span>
+                            {entry.flow && (
+                              <span style={{ fontSize: 12.5, color: 'var(--text)', marginLeft: 8 }}>
+                                <span style={{ fontWeight: 600 }}>{entry.flow.from}</span>
+                                <span style={{ color, margin: '0 7px', fontWeight: 700 }}>→</span>
+                                <span style={{ fontWeight: 600 }}>{entry.flow.to}</span>
+                              </span>
+                            )}
+                            {entry.detail.length > 0 && (
+                              <span style={{ fontSize: 12.5, color: 'var(--text)', marginLeft: 10 }}>
+                                {entry.detail.map((d, i) => (
+                                  <span key={i}>
+                                    {i > 0 && <span style={{ color: 'var(--text-muted)', margin: '0 6px' }}>·</span>}
+                                    {i === 0 && entry.flow && <span style={{ color: 'var(--text-muted)', marginRight: 6 }}>·</span>}
+                                    {d.value}
+                                  </span>
+                                ))}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )
           })}

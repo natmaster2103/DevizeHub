@@ -38,7 +38,16 @@ interface AddDeviceDialogProps {
 function AddDeviceDialog({ requestDetail, onClose, onConfirm, loading }: AddDeviceDialogProps) {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [borrowerName, setBorrowerName] = useState('')
+  const [localError, setLocalError] = useState('')
   const { data } = useAvailableDevices(true)
+
+  function submit() {
+    setLocalError('')
+    if (!borrowerName.trim()) { setLocalError('Vui lòng nhập tên người mượn.'); return }
+    if (selected.size === 0) { setLocalError('Vui lòng chọn ít nhất một thiết bị.'); return }
+    onConfirm({ requestId: requestDetail.id, deviceSkus: [...selected], borrowerName: borrowerName.trim() })
+  }
 
   const devices = (data?.devices ?? []).filter(d => {
     const q = search.toLowerCase()
@@ -100,6 +109,26 @@ function AddDeviceDialog({ requestDetail, onClose, onConfirm, loading }: AddDevi
               fontFamily: "'Consolas',monospace", fontWeight: 700, color: 'var(--primary)'
             }}>{requestDetail.code}</span> · {availableCount} thiết bị sẵn có trong kho
           </div>
+        </div>
+
+        {/* Borrower name */}
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+            Tên người mượn <span style={{ color: '#dc2626' }}>*</span>
+          </label>
+          <input
+            value={borrowerName}
+            onChange={e => setBorrowerName(e.target.value)}
+            placeholder="Nhập tên người mượn"
+            style={{
+              width: '100%', height: 36, padding: '0 12px',
+              border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+              background: 'var(--surface-2)', color: 'var(--text)',
+              fontSize: 13, outline: 'none', boxSizing: 'border-box'
+            }}
+            onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+          />
         </div>
 
         {/* Search */}
@@ -175,8 +204,8 @@ function AddDeviceDialog({ requestDetail, onClose, onConfirm, loading }: AddDevi
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0
         }}>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Đã chọn: {selected.size} thiết bị
+          <span style={{ fontSize: 13, color: localError ? '#dc2626' : 'var(--text-muted)', fontWeight: localError ? 500 : 400 }}>
+            {localError || `Đã chọn: ${selected.size} thiết bị`}
           </span>
           <div style={{ display: 'flex', gap: 10 }}>
             <button
@@ -192,7 +221,7 @@ function AddDeviceDialog({ requestDetail, onClose, onConfirm, loading }: AddDevi
               Hủy
             </button>
             <button
-              onClick={() => onConfirm({ requestId: requestDetail.id, deviceSkus: [...selected] })}
+              onClick={submit}
               disabled={loading || selected.size === 0}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,

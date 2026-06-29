@@ -19,6 +19,7 @@
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
   @keyframes growBar{from{height:0}to{}}
+  @keyframes slideInRight{from{transform:translateX(28px);opacity:.4}to{transform:none;opacity:1}}
 </style>
 </helmet>
 <div style="{{ themeVars }}">
@@ -82,7 +83,7 @@
           <header style="height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20">
             <div style="display:flex;align-items:center;gap:12px;min-width:0">
               <h1 style="font-size:17px;font-weight:700;margin:0;letter-spacing:-.01em;white-space:nowrap">{{ pageTitle }}</h1>
-              <span style="font-size:13px;color:var(--text-muted);white-space:nowrap">{{ pageSub }}</span>
+              
             </div>
             <div style="display:flex;align-items:center;gap:8px">
               <div onClick="{{ toggleRole }}" title="Chuyển vai trò (demo)" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--border);border-radius:var(--rad-sm);cursor:pointer;font-size:12px;font-weight:600;color:var(--text-muted);white-space:nowrap" style-hover="background:var(--hoverbg)">
@@ -109,7 +110,7 @@
             </div>
           </header>
 
-          <main style="flex:1;overflow-y:auto;padding:24px">
+          <main style="{{ mainStyle }}">
 
             <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
               <div style="max-width:1240px;margin:0 auto">
@@ -123,9 +124,7 @@
                         </div>
                         <div style="width:42px;height:42px;border-radius:var(--rad-md);display:flex;align-items:center;justify-content:center;background:{{ c.tint }};color:{{ c.color }}">{{ c.icon }}</div>
                       </div>
-                      <div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;color:var(--text-muted)">
-                        <span style="color:{{ c.color }};font-weight:600">{{ c.delta }}</span>{{ c.deltaLabel }}
-                      </div>
+                      
                     </div>
                   </sc-for>
                 </div>
@@ -134,22 +133,21 @@
                   <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 14px">
                     <div>
                       <div style="font-size:15px;font-weight:700">Thiết bị đang trang bị theo phòng ban</div>
-                      <div style="font-size:12px;color:var(--text-muted);margin-top:2px">{{ deptAllocTotal }} thiết bị đang được cấp phát · top 4 phòng ban</div>
                     </div>
-                    <div onClick="{{ goDevices }}" style="font-size:13px;font-weight:600;color:var(--primary);cursor:pointer">Xem tất cả ›</div>
+                    <button onClick="{{ openLend }}" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px color-mix(in srgb,var(--primary) 28%,transparent)" style-hover="background:var(--primary-hover)">{{ iconAllocate }}<span>Cấp phát</span></button>
                   </div>
                   <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
                     <sc-for list="{{ deptCards }}" as="g" hint-placeholder-count="4">
-                      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px;display:flex;flex-direction:column;gap:14px" style-hover="border-color:var(--primary)">
+                      <div onDragOver="{{ g.onCardDragOver }}" onDrop="{{ g.onCardDrop }}" style="{{ g.cardStyle }}" style-hover="border-color:var(--primary)">
                         <div style="display:flex;align-items:center;gap:12px">
                           <div style="width:40px;height:40px;flex:none;border-radius:var(--rad-md);background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center">{{ iconDept }}</div>
                           <div style="flex:1;min-width:0">
                             <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.dept }}</div>
-                            <div style="font-size:12px;color:var(--text-muted);margin-top:1px">{{ g.share }}% tổng cấp phát</div>
+                            
                           </div>
-                          <div style="font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1">{{ g.count }}</div>
+                          
                         </div>
-                        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">Phiếu đề nghị</div>
+                        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">Phiếu đề nghị ({{ g.reqCount }})</div>
                         <div style="display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding-bottom:2px">
                           <sc-for list="{{ g.chips }}" as="c" hint-placeholder-count="2">
                             <div onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.code }}</div>
@@ -161,7 +159,13 @@
                             <span style="{{ g.reqBadge }}">{{ g.reqStatus }}</span>
                           </sc-if>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;overflow-y:auto">
+                          <sc-if value="{{ g.isEmpty }}" hint-placeholder-val="{{ false }}">
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px 12px;color:var(--text-muted)">
+                              <span style="opacity:.7">{{ iconEmptyBox }}</span>
+                              <span style="font-size:13px">Không có thiết bị được cấp phát</span>
+                            </div>
+                          </sc-if>
                           <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="2">
                             <div style="display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:var(--rad-sm);background:var(--surface-2);border:1px solid var(--border)">
                               <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
@@ -303,19 +307,18 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px">
                   <div style="position:relative;flex:1;max-width:340px">
                     <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex">{{ iconSearch }}</span>
-                    <input placeholder="Tìm phiếu, phòng ban, người đề nghị…" style="width:100%;height:40px;padding:0 12px 0 36px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;outline:none" style-focus="border-color:var(--primary)">
+                    <input placeholder="Tìm phiếu, phòng ban…" style="width:100%;height:40px;padding:0 12px 0 36px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;outline:none" style-focus="border-color:var(--primary)">
                   </div>
-                  <button style="display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">{{ iconPlus }}<span>Tạo phiếu đề nghị</span></button>
+                  <button onClick="{{ openCreateReq }}" style="display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">{{ iconPlus }}<span>Tạo phiếu đề nghị</span></button>
                 </div>
                 <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden">
-                  <div style="display:grid;grid-template-columns:120px 1.4fr 1.3fr 130px 90px 150px 70px;padding:0 18px;height:44px;align-items:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">
-                    <div>Mã phiếu</div><div>Phòng ban</div><div>Người đề nghị</div><div>Ngày lập</div><div>SL</div><div>Trạng thái</div><div></div>
+                  <div style="display:grid;grid-template-columns:120px 1.4fr 130px 90px 150px 70px;padding:0 18px;height:44px;align-items:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">
+                    <div>Mã phiếu</div><div>Phòng ban</div><div>Ngày lập</div><div>SL</div><div>Trạng thái</div><div></div>
                   </div>
                   <sc-for list="{{ reqList }}" as="r" hint-placeholder-count="6">
-                    <div onClick="{{ r.view }}" style="display:grid;grid-template-columns:120px 1.4fr 1.3fr 130px 90px 150px 70px;padding:0 18px;min-height:var(--rh);align-items:center;border-bottom:1px solid var(--border);font-size:var(--tfs);cursor:pointer" style-hover="background:var(--hoverbg)">
+                    <div onClick="{{ r.view }}" style="display:grid;grid-template-columns:120px 1.4fr 130px 90px 150px 70px;padding:0 18px;min-height:var(--rh);align-items:center;border-bottom:1px solid var(--border);font-size:var(--tfs);cursor:pointer" style-hover="background:var(--hoverbg)">
                       <div style="font-family:'Consolas',monospace;font-weight:700;color:var(--primary)">{{ r.code }}</div>
                       <div style="font-weight:600">{{ r.dept }}</div>
-                      <div style="color:var(--text-muted)">{{ r.requester }}</div>
                       <div style="color:var(--text-muted)">{{ r.date }}</div>
                       <div style="color:var(--text-muted)">{{ r.count }}</div>
                       <div><span style="{{ r.badge }}">{{ r.status }}</span></div>
@@ -339,8 +342,8 @@
                       <button onClick="{{ openAddDevice }}" style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:1px dashed var(--primary);border-radius:var(--rad-md);background:var(--primary-soft2);color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">{{ iconPlus }}<span>Thêm thiết bị</span></button>
                     </sc-if>
                   </div>
-                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding-bottom:18px;border-bottom:1px solid var(--border)">
-                    <sc-for list="{{ reqMeta }}" as="m" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+                    <sc-for list="{{ reqMeta }}" as="m" hint-placeholder-count="3">
                       <div><div style="font-size:12px;color:var(--text-muted);font-weight:500">{{ m.k }}</div><div style="font-size:14px;font-weight:600;margin-top:3px">{{ m.v }}</div></div>
                     </sc-for>
                   </div>
@@ -376,11 +379,35 @@
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
                     <div style="grid-column:1 / -1">
                       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Thiết bị <span style="color:#dc2626">*</span></label>
-                      <select style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;cursor:pointer">
-                        <option>— Chọn thiết bị còn trong kho —</option>
-                        <sc-for list="{{ availOptions }}" as="o" hint-placeholder-count="4"><option>{{ o }}</option></sc-for>
-                      </select>
-                      <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Chỉ hiển thị thiết bị có trạng thái “Trong kho”.</div>
+                      <div style="position:relative">
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:44px;padding:7px 8px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2)">
+                          <sc-for list="{{ allocSelected }}" as="d" hint-placeholder-count="0">
+                            <span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 5px 0 11px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:12.5px;font-weight:600">
+                              {{ d.name }}
+                              <span onClick="{{ d.onRemove }}" title="Bỏ chọn" style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;cursor:pointer" style-hover="background:color-mix(in srgb,var(--primary) 20%,transparent)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span>
+                            </span>
+                          </sc-for>
+                          <input value="{{ allocQuery }}" onInput="{{ onAllocSearch }}" onFocus="{{ onAllocFocus }}" onBlur="{{ onAllocBlur }}" placeholder="{{ allocPlaceholder }}" style="flex:1;min-width:160px;height:30px;border:none;background:transparent;outline:none;font-size:14px;color:var(--text)">
+                        </div>
+                        <sc-if value="{{ allocOpen }}" hint-placeholder-val="{{ false }}">
+                          <div style="position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-md);box-shadow:0 12px 32px rgba(15,23,42,.16);max-height:266px;overflow-y:auto;padding:6px">
+                            <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;padding:4px 8px 6px">{{ allocAvailCount }} thiết bị khả dụng</div>
+                            <sc-for list="{{ allocAvail }}" as="d" hint-placeholder-count="4">
+                              <div onMouseDown="{{ preventDef }}" onClick="{{ d.onAdd }}" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--rad-sm);cursor:pointer" style-hover="background:var(--surface-2)">
+                                <div style="flex:1;min-width:0">
+                                  <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</div>
+                                  <div style="font-size:12px;color:var(--text-muted)"><span style="font-family:'Consolas',monospace">{{ d.sku }}</span> · {{ d.cat }}</div>
+                                </div>
+                                <span style="flex:none;color:var(--primary);display:flex">{{ iconPlus }}</span>
+                              </div>
+                            </sc-for>
+                            <sc-if value="{{ allocNoResult }}" hint-placeholder-val="{{ false }}">
+                              <div style="font-size:12.5px;color:var(--text-muted);text-align:center;padding:16px 8px">Không tìm thấy thiết bị phù hợp.</div>
+                            </sc-if>
+                          </div>
+                        </sc-if>
+                      </div>
+                      <div style="font-size:12px;color:var(--text-muted);margin-top:6px">{{ allocSelCount }} thiết bị đã chọn · chỉ hiển thị thiết bị “Trong kho”.</div>
                     </div>
                     <div>
                       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Nhân viên nhận <span style="color:#dc2626">*</span></label>
@@ -559,6 +586,131 @@
         
       </div>
 
+      <sc-if value="{{ lendOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:fixed;inset:0;z-index:95;pointer-events:none">
+          <div onClick="{{ stopProp }}" style="position:absolute;top:0;right:0;height:100vh;width:400px;background:var(--surface);border-left:1px solid var(--border);box-shadow:-14px 0 44px rgba(0,0,0,.18);display:flex;flex-direction:column;pointer-events:auto;animation:slideInRight .22s cubic-bezier(.22,.61,.36,1)">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);flex:none">
+              <div>
+                <div style="font-size:16px;font-weight:700">Cấp phát thiết bị</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Chọn rồi kéo thiết bị vào thẻ phòng ban</div>
+              </div>
+              <div onClick="{{ closeLend }}" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="background:var(--hoverbg)">{{ iconClose }}</div>
+            </div>
+            <div style="padding:14px 20px 0;flex:none">
+              <label style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:7px">Phiếu đề nghị</label>
+              <select value="{{ lendReq }}" onChange="{{ onLendReq }}" style="width:100%;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;cursor:pointer" style-focus="border-color:var(--primary)">
+                <sc-for list="{{ lendReqOptions }}" as="o" hint-placeholder-count="2"><option value="{{ o.code }}">{{ o.label }}</option></sc-for>
+              </select>
+            </div>
+            <div style="padding:14px 20px;border-bottom:1px solid var(--border);flex:none">
+              <div style="position:relative">
+                <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex">{{ iconSearch }}</span>
+                <input value="{{ lendQuery }}" onInput="{{ onLendSearch }}" placeholder="Tìm thiết bị còn trong kho…" style="width:100%;height:40px;padding:0 12px 0 36px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none" style-focus="border-color:var(--primary)">
+              </div>
+            </div>
+            <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 20px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <label style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;cursor:pointer">
+                  <input type="checkbox" checked="{{ allSelected }}" onChange="{{ toggleSelectAll }}" style="width:15px;height:15px;accent-color:var(--primary)">
+                  {{ lendCount }} thiết bị trong kho
+                </label>
+                <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:11px;font-weight:700;color:var(--primary)">{{ selectedCount }} đã chọn</span>
+                </sc-if>
+              </div>
+              <sc-for list="{{ lendDevices }}" as="d" hint-placeholder-count="5">
+                <div draggable="true" onDragStart="{{ d.onDragStart }}" onDragEnd="{{ onRowDragEnd }}" onClick="{{ d.onToggle }}" style="{{ d.rowStyle }}" style-hover="border-color:var(--primary)">
+                  <input type="checkbox" checked="{{ d.selected }}" onChange="{{ d.onToggle }}" onClick="{{ stopProp }}" style="width:15px;height:15px;accent-color:var(--primary);flex:none">
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</div>
+                    <div style="font-size:12px;color:var(--text-muted)"><span style="font-family:'Consolas',monospace">{{ d.sku }}</span> · {{ d.cat }}</div>
+                  </div>
+                  <span style="color:var(--text-muted);flex:none;display:flex">{{ iconDrag }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:14px 20px;border-top:1px solid var(--border);flex:none;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:9px">
+              <span style="flex:none;display:flex;color:var(--primary)">{{ iconDrop }}</span>
+              <span style="line-height:1.4">Kéo thiết bị (đơn lẻ hoặc đã chọn) thả vào thẻ phòng ban để cấp phát.</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ lendModalOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeLendModal }}" style="position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:110;padding:24px">
+          <div onClick="{{ stopProp }}" style="width:440px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);box-shadow:0 24px 60px rgba(0,0,0,.3);overflow:hidden;animation:popIn .18s ease">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)">
+              <div style="font-size:16px;font-weight:700">Cấp phát thiết bị</div>
+              <div onClick="{{ closeLendModal }}" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="background:var(--hoverbg)">{{ iconClose }}</div>
+            </div>
+            <div style="padding:22px">
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--primary-soft2);border:1px solid color-mix(in srgb,var(--primary) 28%,transparent);margin-bottom:14px">
+                <span style="width:34px;height:34px;flex:none;border-radius:var(--rad-md);background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center">{{ iconDept }}</span>
+                <div style="line-height:1.3">
+                  <div style="font-size:12px;color:var(--text-muted)">Cấp phát cho</div>
+                  <div style="font-size:14px;font-weight:700">{{ lendModalDept }}</div>
+                </div>
+                <div style="margin-left:auto;font-size:12px;font-weight:700;color:var(--primary)">{{ lendModalCount }}</div>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px;max-height:168px;overflow-y:auto">
+                <sc-for list="{{ lendModalDevices }}" as="m" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--surface-2)">
+                    <span style="width:7px;height:7px;border-radius:2px;background:#16a34a;flex:none"></span>
+                    <div style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</div>
+                    <span style="font-family:'Consolas',monospace;font-size:12px;color:var(--text-muted);flex:none">{{ m.sku }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Tên người mượn <span style="color:#dc2626">*</span></label>
+              <input placeholder="Nhập họ tên nhân viên nhận thiết bị…" style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;margin-bottom:16px" style-focus="border-color:var(--primary)">
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Ghi chú</label>
+              <textarea placeholder="Tình trạng thiết bị, ngày hẹn trả…" style="width:100%;height:70px;padding:11px 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit"></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border)">
+              <button onClick="{{ closeLendModal }}" style="height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Hủy</button>
+              <button onClick="{{ confirmLend }}" style="height:40px;padding:0 18px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">Xác nhận cấp phát</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ createReqOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeCreateReq }}" style="position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:110;padding:24px">
+          <div onClick="{{ stopProp }}" style="width:520px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rad-lg);box-shadow:0 24px 60px rgba(0,0,0,.3);overflow:hidden;animation:popIn .18s ease">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)">
+              <div>
+                <div style="font-size:16px;font-weight:700">Tạo phiếu đề nghị</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Yêu cầu cấp phát thiết bị cho phòng ban</div>
+              </div>
+              <div onClick="{{ closeCreateReq }}" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--rad-sm);cursor:pointer;color:var(--text-muted)" style-hover="background:var(--hoverbg)">{{ iconClose }}</div>
+            </div>
+            <div style="padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div style="grid-column:1 / -1">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Mã phiếu <span style="color:#dc2626">*</span></label>
+                <input placeholder="Nhập mã phiếu, VD: DX-302" style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;font-family:'Consolas','SF Mono',monospace" style-focus="border-color:var(--primary)">
+              </div>
+              <div style="grid-column:1 / -1">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Phòng ban <span style="color:#dc2626">*</span></label>
+                <select style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;cursor:pointer"><sc-for list="{{ deptOptions }}" as="o" hint-placeholder-count="6"><option>{{ o }}</option></sc-for></select>
+              </div>
+              <div style="grid-column:1 / -1">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Ngày lập</label>
+                <input type="date" value="2026-06-21" style="width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none">
+              </div>
+              <div style="grid-column:1 / -1">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">Ghi chú</label>
+                <textarea placeholder="Lý do / mục đích cấp phát thiết bị…" style="width:100%;height:78px;padding:11px 12px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none;resize:vertical;font-family:inherit"></textarea>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border)">
+              <button onClick="{{ closeCreateReq }}" style="height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Hủy</button>
+              <button onClick="{{ closeCreateReq }}" style="display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 18px;border:none;border-radius:var(--rad-md);background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--primary-hover)">{{ iconPlus }}<span>Tạo phiếu</span></button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
       <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
         <div style="position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px" onClick="{{ closeModal }}">
           <sc-if value="{{ isReturnModal }}" hint-placeholder-val="{{ true }}">
@@ -597,13 +749,13 @@
             <div style="padding:16px 22px;border-bottom:1px solid var(--border)">
               <div style="position:relative">
                 <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex">{{ iconSearch }}</span>
-                <input placeholder="Tìm thiết bị còn trong kho…" style="width:100%;height:40px;padding:0 12px 0 36px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none" style-focus="border-color:var(--primary)" />
+                <input placeholder="Tìm thiết bị còn trong kho…" style="width:100%;height:40px;padding:0 12px 0 36px;border:1px solid var(--border);border-radius:var(--rad-md);background:var(--surface-2);color:var(--text);font-size:14px;outline:none" style-focus="border-color:var(--primary)">
               </div>
             </div>
             <div style="flex:1;overflow-y:auto;padding:10px 14px">
               <sc-for list="{{ availDevices }}" as="d" hint-placeholder-count="4">
                 <label style="display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:var(--rad-sm);cursor:pointer" style-hover="background:var(--hoverbg)">
-                  <input type="checkbox" style="width:17px;height:17px;accent-color:var(--primary);flex:none" />
+                  <input type="checkbox" style="width:17px;height:17px;accent-color:var(--primary);flex:none">
                   <div style="flex:1;min-width:0">
                     <div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</div>
                     <div style="font-size:12px;color:var(--text-muted)"><span style="font-family:'Consolas',monospace">{{ d.sku }}</span> · {{ d.cat }}</div>
@@ -625,9 +777,14 @@
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:900},&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Xanh dương&quot;,&quot;Xanh mòng két&quot;,&quot;Tím hoàng hôn&quot;,&quot;Lục rừng&quot;],&quot;default&quot;:&quot;Xanh dương&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Thoáng&quot;,&quot;Tiêu chuẩn&quot;,&quot;Gọn&quot;],&quot;default&quot;:&quot;Tiêu chuẩn&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;chrome&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Mềm mại&quot;,&quot;Tiêu chuẩn&quot;,&quot;Sắc nét&quot;],&quot;default&quot;:&quot;Tiêu chuẩn&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;groupByDept&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:900},&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Xanh dương&quot;,&quot;Xanh mòng két&quot;,&quot;Tím hoàng hôn&quot;,&quot;Lục rừng&quot;],&quot;default&quot;:&quot;Xanh mòng két&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Thoáng&quot;,&quot;Tiêu chuẩn&quot;,&quot;Gọn&quot;],&quot;default&quot;:&quot;Thoáng&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;chrome&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Mềm mại&quot;,&quot;Tiêu chuẩn&quot;,&quot;Sắc nét&quot;],&quot;default&quot;:&quot;Mềm mại&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;groupByDept&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
 class Component extends DCLogic {
-  state = { screen: 'dashboard', loggedIn: false, collapsed: false, dark: false, role: 'admin', hoverBar: -1, deviceQuery: '', deviceFilter: 'all', selectedDevice: 'LAP-0012', selectedRequest: 'DX-301', detailTab: 'history', catalogTab: 'cat', modal: null, deptTab: {}, deptPage: {} };
+  state = { screen: 'dashboard', loggedIn: false, collapsed: false, dark: false, role: 'admin', hoverBar: -1, deviceQuery: '', deviceFilter: 'all', selectedDevice: 'LAP-0012', selectedRequest: 'DX-301', detailTab: 'history', catalogTab: 'cat', modal: null, deptTab: {}, deptPage: {}, lendOpen: false, lendQuery: '', lendModal: null, dragOver: false, lendSelected: [], dropDept: null, lendReq: '', allocQuery: '', allocSelected: [], allocOpen: false, createReqOpen: false };
+
+  addAlloc(sku){ this.setState(s=>({ allocSelected:[...new Set([...(s.allocSelected||[]), sku])], allocQuery:'', allocOpen:true })); }
+  removeAlloc(sku){ this.setState(s=>({ allocSelected:(s.allocSelected||[]).filter(x=>x!==sku) })); }
+
+  toggleLendSelect(sku){ this.setState(s=>{ const set=new Set(s.lendSelected||[]); if(set.has(sku)) set.delete(sku); else set.add(sku); return {lendSelected:[...set]}; }); }
 
   setDeptTab(dept, tab){ this.setState(s=>({ deptTab: {...s.deptTab, [dept]: tab}, deptPage: {...s.deptPage, [dept]: 1} })); }
   setDeptPage(dept, p){ this.setState(s=>({ deptPage: {...s.deptPage, [dept]: p} })); }
@@ -689,7 +846,7 @@ class Component extends DCLogic {
     {code:'DX-300',dept:'Phòng Kinh doanh',requester:'Vũ Minh Đức',date:'09/03/2026',status:'Đang trang bị',count:2,note:'Bổ sung điện thoại cho đội sales thị trường.'},
     {code:'DX-298',dept:'Phòng IT',requester:'Đặng Văn Phúc',date:'03/03/2026',status:'Hoàn tất',count:5,note:'Nâng cấp thiết bị mạng tầng 3.'},
     {code:'DX-295',dept:'Phòng Nhân sự',requester:'Hoàng Thị Em',date:'24/02/2026',status:'Hoàn tất',count:1,note:''},
-    {code:'DX-293',dept:'Phòng Hành chính',requester:'Phạm Thị Dung',date:'18/02/2026',status:'Đang xử lý',count:2,note:'Chờ duyệt ngân sách quý 1.'},
+    {code:'DX-293',dept:'Phòng Hành chính',requester:'Phạm Thị Dung',date:'18/02/2026',status:'Đang trang bị',count:2,note:'Trang bị bổ sung cho phòng Hành chính.'},
     {code:'DX-290',dept:'Phòng Kỹ thuật',requester:'Lê Hoàng Cường',date:'10/02/2026',status:'Hoàn tất',count:4,note:''},
   ];
 
@@ -840,13 +997,18 @@ class Component extends DCLogic {
       const activeCode = this.state.deptTab[d.dept] || d.reqs[0].code;
       const activeReq = d.reqs.find(r=>r.code===activeCode) || d.reqs[0];
       const chips = d.reqs.map(r=>({code:r.code, style:reqChip(r.code===activeReq.code), onClick:()=>this.setDeptTab(d.dept, r.code)}));
-      const allItems = activeReq.items.map(it=>({...it, lender:d.lender, returnable: activeReq.status==='Đang trang bị', ret:()=>this.setState({modal:{device:{name:it.name, sku:'—', holder:it.borrower}, req:activeReq.code}})}));
+      const allItems = activeReq.items.map(it=>({...it, lender:d.lender, returnable: true, ret:()=>this.setState({modal:{device:{name:it.name, sku:'—', holder:it.borrower}, req:activeReq.code}})}));
       const pageCount = Math.max(1, Math.ceil(allItems.length / PER_PAGE));
       const curPage = Math.min(this.state.deptPage[d.dept] || 1, pageCount);
       const items = allItems.slice((curPage-1)*PER_PAGE, curPage*PER_PAGE);
       const pages = Array.from({length:pageCount}, (_,i)=>({n:i+1, style:pgBtn(i+1===curPage), onClick:()=>this.setDeptPage(d.dept, i+1)}));
-      return {dept:d.dept, count:d.count, share, chips, items,
-        reqMeta:`${activeReq.requester} · ${activeReq.date}`, reqStatus:activeReq.status, reqBadge:this.badge(activeReq.status).style, reqItemCount:`${activeReq.items.length} thiết bị`,
+      const isDrop=this.state.dropDept===d.dept;
+      return {dept:d.dept, count:d.count, share, chips, items, isEmpty: items.length===0,
+        cardStyle:`background:var(--surface);border:1px solid ${isDrop?'var(--primary)':'var(--border)'};border-radius:var(--rad-lg);padding:18px;display:flex;flex-direction:column;gap:14px;height:430px${isDrop?';box-shadow:0 0 0 3px var(--primary-soft)':''}`,
+        onCardDragOver:(e)=>{e.preventDefault(); if(this.state.dropDept!==d.dept) this.setState({dropDept:d.dept});},
+        onCardDrop:(e)=>{e.preventDefault(); this.setState({dropDept:null, lendModal:{devices:this.draggedDevices||[], dept:d.dept}});},
+        reqCount: String(d.reqs.length).padStart(2,'0'),
+        reqMeta:`${activeReq.date}`, reqStatus:activeReq.status, reqBadge:this.badge(activeReq.status).style, reqItemCount:`${activeReq.items.length} thiết bị`,
         isActiveReq: activeReq.status==='Đang trang bị',
         hasPager: pageCount>1, pages, pageInfo:`Trang ${curPage}/${pageCount}`,
         prevStyle:pgBtn(false), nextStyle:pgBtn(false),
@@ -874,10 +1036,19 @@ class Component extends DCLogic {
     const req=this.requests.find(r=>r.code===s.selectedRequest)||this.requests[0];
     const reqBadge=this.badge(req.status).style;
     const reqDevices=(this.reqLines[req.code]||this.reqLines['DX-301']).map(l=>({...l, badge:this.badge(l.status).style, returnable:l.status==='Đang trang bị', ret:()=>this.setState({modal:{device:l, req:req.code}})}));
-    const reqMeta=[{k:'Phòng ban',v:req.dept},{k:'Người đề nghị',v:req.requester},{k:'Ngày lập',v:req.date},{k:'Số thiết bị',v:req.count+' thiết bị'}];
+    const reqMeta=[{k:'Phòng ban',v:req.dept},{k:'Ngày lập',v:req.date},{k:'Số thiết bị',v:req.count+' thiết bị'}];
 
     // ---- Available devices for pickers ----
     const available=this.devices.filter(d=>d.status==='Trong kho');
+    const aq=(s.allocQuery||'').trim().toLowerCase();
+    const allocSel=s.allocSelected||[];
+    const allocLeft=available.filter(d=>!allocSel.includes(d.sku) && (!aq||(d.name+' '+d.sku+' '+d.cat).toLowerCase().includes(aq)));
+    const allocRight=available.filter(d=>allocSel.includes(d.sku));
+    const lq=(s.lendQuery||'').trim().toLowerCase();
+    const lendList=available.filter(d=>!lq||(d.name+' '+d.sku+' '+d.cat).toLowerCase().includes(lq));
+    const lendSel = s.lendSelected || [];
+    const lendRow = (sel)=>`display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid ${sel?'var(--primary)':'var(--border)'};border-radius:var(--rad-sm);background:${sel?'var(--primary-soft2)':'var(--surface)'};cursor:grab`;
+    const dropZoneStyle=`border:2px dashed ${s.dragOver?'var(--primary)':'var(--border)'};border-radius:var(--rad-md);background:${s.dragOver?'var(--primary-soft)':'var(--surface-2)'};padding:22px 16px;text-align:center;transition:all .12s;display:flex;flex-direction:column;align-items:center;gap:8px;color:${s.dragOver?'var(--primary)':'var(--text-muted)'}`;
 
     // ---- Reports ----
     const cats=['Máy tính xách tay','Máy tính để bàn','Màn hình','Máy in','Điện thoại','Máy chiếu','Thiết bị mạng'];
@@ -941,6 +1112,7 @@ class Component extends DCLogic {
       isDeviceDetail: s.screen==='deviceDetail',
       filterChips, filteredDevices, deviceCount: filteredDevices.length, totalCount: this.devices.length,
       showDeptGrid, deptCards, deptAllocTotal,
+      iconEmptyBox: this.H('<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>'),
       iconDept: this.H('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9" y2="9.01"/><line x1="9" y1="12" x2="9" y2="12.01"/><line x1="9" y1="15" x2="9" y2="15.01"/></svg>'),
       deviceQuery: s.deviceQuery,
       onSearch:(e)=>this.setState({deviceQuery:e.target.value}),
@@ -980,6 +1152,52 @@ class Component extends DCLogic {
       openAddDevice:()=>this.setState({modal:{type:'add', req:req.code}}),
       availDevices: available.map(d=>({sku:d.sku, name:d.name, cat:d.cat})),
       availCount: available.length,
+
+      allocQuery: s.allocQuery,
+      allocOpen: s.allocOpen,
+      allocPlaceholder: allocRight.length ? 'Thêm thiết bị…' : 'Gõ tên hoặc SKU để tìm thiết bị…',
+      onAllocSearch:(e)=>this.setState({allocQuery:e.target.value, allocOpen:true}),
+      onAllocFocus:()=>this.setState({allocOpen:true}),
+      onAllocBlur:()=>this.setState({allocOpen:false}),
+      preventDef:(e)=>e.preventDefault(),
+      allocAvail: allocLeft.slice(0,50).map(d=>({name:d.name,sku:d.sku,cat:d.cat, onAdd:()=>this.addAlloc(d.sku)})),
+      allocAvailCount: allocLeft.length,
+      allocNoResult: allocLeft.length===0,
+      allocSelected: allocRight.map(d=>({name:d.name,sku:d.sku,cat:d.cat, onRemove:()=>this.removeAlloc(d.sku)})),
+      allocSelCount: allocRight.length,
+      allocHasSel: allocRight.length>0,
+      allocEmpty: allocRight.length===0,
+      createReqOpen: s.createReqOpen,
+      openCreateReq:()=>this.setState({createReqOpen:true}),
+      closeCreateReq:()=>this.setState({createReqOpen:false}),
+
+      mainStyle: `flex:1;overflow-y:auto;padding:24px${s.lendOpen?';padding-right:444px':''};transition:padding .2s ease`,
+      lendOpen: s.lendOpen, lendQuery: s.lendQuery, lendCount: lendList.length,
+      lendReqOptions: this.requests.filter(r=>r.status==='Đang trang bị').map(r=>({code:r.code, label:`${r.code} — ${r.dept}`})),
+      lendReq: s.lendReq || (this.requests.find(r=>r.status==='Đang trang bị')||{}).code || '',
+      onLendReq:(e)=>this.setState({lendReq:e.target.value}),
+      selectedCount: lendSel.length, hasSelection: lendSel.length>0,
+      allSelected: lendList.length>0 && lendList.every(d=>lendSel.includes(d.sku)),
+      toggleSelectAll:()=>{ const all=lendList.length>0 && lendList.every(d=>lendSel.includes(d.sku)); this.setState({lendSelected: all?[]:lendList.map(d=>d.sku)}); },
+      lendDevices: lendList.map(d=>{
+        const selected = lendSel.includes(d.sku);
+        return { sku:d.sku, name:d.name, cat:d.cat, selected, rowStyle: lendRow(selected),
+          onToggle:()=>this.toggleLendSelect(d.sku),
+          onDragStart:()=>{ const pick=(lendSel.includes(d.sku)&&lendSel.length>0)?lendSel:[d.sku]; this.draggedDevices=lendList.filter(x=>pick.includes(x.sku)).map(x=>({name:x.name,sku:x.sku,cat:x.cat})); } };
+      }),
+      onRowDragEnd:()=>{ if(this.state.dropDept) this.setState({dropDept:null}); },
+      openLend:()=>this.setState({lendOpen:true, lendQuery:'', lendModal:null, lendSelected:[], dropDept:null}),
+      closeLend:()=>this.setState({lendOpen:false, dropDept:null}),
+      onLendSearch:(e)=>this.setState({lendQuery:e.target.value}),
+      lendModalOpen: !!s.lendModal,
+      lendModalDevices: s.lendModal?(s.lendModal.devices||[]):[],
+      lendModalDept: s.lendModal?s.lendModal.dept:'',
+      lendModalCount: s.lendModal?`${(s.lendModal.devices||[]).length} thiết bị`:'',
+      closeLendModal:()=>this.setState({lendModal:null}),
+      confirmLend:()=>this.setState({lendModal:null, lendSelected:[]}),
+      iconAllocate: this.H(this.ICON.allocate),
+      iconDrag: this.H('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg>'),
+      iconDrop: this.H('<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'),
       iconClose: this.H('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'),
 
       isReports: s.screen==='reports',

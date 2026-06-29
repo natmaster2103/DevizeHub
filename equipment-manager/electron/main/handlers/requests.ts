@@ -30,6 +30,12 @@ function fmtDate(iso: string): string {
   return `${dd}/${mm}/${yyyy}`
 }
 
+function parseBorrowerFromNotes(notes: string | null): string {
+  if (!notes) return ''
+  const match = notes.match(/^Người mượn: (.+)/)
+  return match ? match[1].trim() : ''
+}
+
 
 export function makeRequestHandlers(db: AppDb) {
   return {
@@ -114,6 +120,7 @@ export function makeRequestHandlers(db: AppDb) {
           deviceName: devices.name,
           categoryName: categories.name,
           recipientName: employees.name,
+          allocNotes: allocations.notes,
         })
         .from(allocations)
         .leftJoin(devices, eq(allocations.deviceId, devices.id))
@@ -127,7 +134,7 @@ export function makeRequestHandlers(db: AppDb) {
         deviceSku: l.deviceSku ?? '',
         deviceName: l.deviceName ?? '',
         category: l.categoryName ?? '',
-        recipient: l.recipientName ?? '',
+        recipient: l.recipientName ?? parseBorrowerFromNotes(l.allocNotes),
         isReturned: l.returnedAt !== null,
       }))
 
@@ -177,7 +184,7 @@ export function makeRequestHandlers(db: AppDb) {
       const newStatus = conditionToStatus[args.condition] ?? 'available'
 
       db.update(allocations)
-        .set({ returnedAt: now, conditionIn: args.condition, notes: args.notes || null })
+        .set({ returnedAt: now, returnedBy: session.current?.id ?? null, conditionIn: args.condition, notes: args.notes || null })
         .where(eq(allocations.id, alloc.id))
         .run()
 
@@ -192,6 +199,9 @@ export function makeRequestHandlers(db: AppDb) {
     async addDevices(args: AddToRequestArgs): Promise<ApiResponse<{ ok: true }>> {
       if (!args?.requestId || !Array.isArray(args.deviceSkus) || args.deviceSkus.length === 0) {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Dữ liệu không hợp lệ.' } }
+      }
+      if (!args.borrowerName?.trim()) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Vui lòng nhập tên người mượn.' } }
       }
 
       const req = db
@@ -223,6 +233,7 @@ export function makeRequestHandlers(db: AppDb) {
 
       const now = new Date().toISOString()
       const issuedBy = session.current?.id ?? null
+      const notesStr = `Người mượn: ${args.borrowerName.trim()}`
 
       for (const dev of availableDevs) {
         db.insert(allocations)
@@ -233,6 +244,7 @@ export function makeRequestHandlers(db: AppDb) {
             departmentId: req.departmentId ?? null,
             issuedBy,
             issuedAt: now,
+            notes: notesStr,
           })
           .run()
 

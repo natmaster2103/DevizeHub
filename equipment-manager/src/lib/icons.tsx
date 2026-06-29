@@ -209,3 +209,15 @@ export const IconPrint = ({ size = 16 }: IconProps) =>
     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
     <rect x="6" y="14" width="12" height="8"/>
   </>)
+
+export const IconTrash = ({ size = 15 }: IconProps) =>
+  svg(size, <>
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+    <path d="M10 11v6"/>
+    <path d="M14 11v6"/>
+    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+  </>)
+
+export const IconChevronDown = ({ size = 14 }: IconProps) =>
+  svg(size, <polyline points="6 9 12 15 18 9"/>)

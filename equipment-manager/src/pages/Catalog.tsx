@@ -84,9 +84,7 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
   const qc = useQueryClient()
   const [editId, setEditId] = useState<number | null>(null)
   const [editName, setEditName] = useState('')
-  const [editMin, setEditMin] = useState(0)
   const [newName, setNewName] = useState('')
-  const [newMin, setNewMin] = useState(0)
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null)
 
   // Group editing state
@@ -106,9 +104,9 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
   const templates: GroupFieldTemplate[] = templateData?.templates ?? []
 
   const saveCatMut = useMutation({
-    mutationFn: (args: { id?: number; name: string; minStock: number }) =>
-      unwrap(api.catalog.saveCategory(args)),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['catalog'] }); setEditId(null); setNewName(''); setNewMin(0) },
+    mutationFn: (args: { id?: number; name: string }) =>
+      unwrap(api.catalog.saveCategory({ ...args, minStock: 0 })),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['catalog'] }); setEditId(null); setNewName('') },
   })
   const delCatMut = useMutation({
     mutationFn: (id: number) => unwrap(api.catalog.deleteCategory({ id })),
@@ -147,9 +145,8 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
       {/* ── Left: categories ── */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--rad-lg)', overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 100px 88px' : '1fr 100px', padding: '0 16px', height: 42, alignItems: 'center', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 88px' : '1fr', padding: '0 16px', height: 42, alignItems: 'center', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
           <div>Tên loại</div>
-          <div>Tồn kho tối thiểu</div>
           {isAdmin && <div />}
         </div>
 
@@ -157,7 +154,7 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
           <div key={row.id}
             onClick={() => setSelectedCatId(row.id === selectedCatId ? null : row.id)}
             style={{
-              display: 'grid', gridTemplateColumns: isAdmin ? '1fr 100px 88px' : '1fr 100px',
+              display: 'grid', gridTemplateColumns: isAdmin ? '1fr 88px' : '1fr',
               padding: '0 16px', minHeight: 48, alignItems: 'center',
               borderBottom: '1px solid var(--border)', fontSize: 14, cursor: 'pointer',
               background: selectedCatId === row.id ? 'var(--primary-soft)' : '',
@@ -168,19 +165,17 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
             {editId === row.id ? (
               <>
                 <InlineInput value={editName} onChange={e => setEditName(e.target.value)} onClick={e => e.stopPropagation()} style={{ width: '90%' }} />
-                <InlineInput type="number" value={editMin} onChange={e => setEditMin(Number(e.target.value))} onClick={e => e.stopPropagation()} style={{ width: 72 }} />
                 <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
-                  <button onClick={() => saveCatMut.mutate({ id: row.id, name: editName, minStock: editMin })} style={{ height: 28, padding: '0 10px', fontSize: 12, fontWeight: 600, border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', cursor: 'pointer' }}>Lưu</button>
+                  <button onClick={() => saveCatMut.mutate({ id: row.id, name: editName })} style={{ height: 28, padding: '0 10px', fontSize: 12, fontWeight: 600, border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', cursor: 'pointer' }}>Lưu</button>
                   <button onClick={() => setEditId(null)} style={{ height: 28, padding: '0 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>Hủy</button>
                 </div>
               </>
             ) : (
               <>
                 <div style={{ fontWeight: 500, color: selectedCatId === row.id ? 'var(--primary)' : 'var(--text)' }}>{row.name}</div>
-                <div style={{ color: 'var(--text-muted)' }}>{row.minStock}</div>
                 {isAdmin && (
                   <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
-                    <IconBtn title="Sửa" onClick={() => { setEditId(row.id); setEditName(row.name); setEditMin(row.minStock) }}><IconEdit size={13} /></IconBtn>
+                    <IconBtn title="Sửa" onClick={() => { setEditId(row.id); setEditName(row.name) }}><IconEdit size={13} /></IconBtn>
                     <IconBtn title="Xóa" onClick={() => delCatMut.mutate(row.id)}><IconTrash size={13} /></IconBtn>
                   </div>
                 )}
@@ -190,10 +185,9 @@ function CategoriesTab({ rows, groups, isAdmin }: { rows: CategoryRow[]; groups:
         ))}
 
         {isAdmin && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 88px', padding: '10px 16px', alignItems: 'center', gap: 8, background: 'var(--surface-2)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 88px', padding: '10px 16px', alignItems: 'center', gap: 8, background: 'var(--surface-2)' }}>
             <InlineInput value={newName} onChange={e => setNewName(e.target.value)} placeholder="Tên loại thiết bị mới" style={{ width: '90%' }} />
-            <InlineInput type="number" value={newMin} onChange={e => setNewMin(Number(e.target.value))} style={{ width: 72 }} />
-            <button onClick={() => { if (newName.trim()) saveCatMut.mutate({ name: newName, minStock: newMin }) }} style={{ height: 32, padding: '0 12px', display: 'inline-flex', alignItems: 'center', gap: 5, border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => { if (newName.trim()) saveCatMut.mutate({ name: newName }) }} style={{ height: 32, padding: '0 12px', display: 'inline-flex', alignItems: 'center', gap: 5, border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               <IconPlus size={13} />Thêm
             </button>
           </div>

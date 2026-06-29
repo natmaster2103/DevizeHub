@@ -274,16 +274,33 @@ describe('requests status flow', () => {
     const { db, h, reqId } = await setup()
     // make a device available
     const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
-    const added = await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku] })
+    const added = await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku], borrowerName: 'Nguyễn Văn A' })
     expect(added.ok).toBe(true)
     const got = await h.get({ id: reqId })
     if (got.ok) expect(got.data.status).toBe('allocated')
   })
 
+  it('addDevices requires a borrower name', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    const added = await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku], borrowerName: '  ' })
+    expect(added.ok).toBe(false)
+    if (!added.ok) expect(added.error.code).toBe('BAD_REQUEST')
+  })
+
+  it('addDevices stores borrower name as the line recipient', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku], borrowerName: 'Trần Thị B' })
+    const got = await h.get({ id: reqId })
+    expect(got.ok).toBe(true)
+    if (got.ok) expect(got.data.lines[0].recipient).toBe('Trần Thị B')
+  })
+
   it('updateStatus moves allocated → completed', async () => {
     const { db, h, reqId } = await setup()
     const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
-    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku] })
+    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku], borrowerName: 'Nguyễn Văn A' })
     const upd = await h.updateStatus({ id: reqId, status: 'completed' })
     expect(upd.ok).toBe(true)
     const got = await h.get({ id: reqId })
@@ -300,9 +317,9 @@ describe('requests status flow', () => {
   it('addDevices does not overwrite completed', async () => {
     const { db, h, reqId } = await setup()
     const avail = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()
-    await h.addDevices({ requestId: reqId, deviceSkus: [avail[0].sku] })
+    await h.addDevices({ requestId: reqId, deviceSkus: [avail[0].sku], borrowerName: 'Nguyễn Văn A' })
     await h.updateStatus({ id: reqId, status: 'completed' })
-    await h.addDevices({ requestId: reqId, deviceSkus: [avail[1].sku] })
+    await h.addDevices({ requestId: reqId, deviceSkus: [avail[1].sku], borrowerName: 'Nguyễn Văn A' })
     const got = await h.get({ id: reqId })
     if (got.ok) expect(got.data.status).toBe('completed')
   })
@@ -310,7 +327,7 @@ describe('requests status flow', () => {
   it('staff without manage_requests cannot updateStatus', async () => {
     const { db, h, reqId } = await setup()
     const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
-    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku] })
+    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku], borrowerName: 'Nguyễn Văn A' })
     session.current = STAFF_SESSION
     const upd = await h.updateStatus({ id: reqId, status: 'completed' })
     expect(upd.ok).toBe(false)
