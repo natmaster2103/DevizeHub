@@ -147,7 +147,7 @@ export default function Reports() {
               {data.byGroup.length === 0
                 ? <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Không có dữ liệu trong kỳ.</div>
                 : data.byGroup.map((g: ReportGroupRow) => (
-                    <BarRow key={`${g.groupId}`} label={g.groupName} count={g.count} share={g.share} />
+                    <BarRow key={g.groupId != null ? String(g.groupId) : 'ungrouped'} label={g.groupName} count={g.count} share={g.share} />
                   ))}
             </div>
             <div style={card}>
@@ -155,7 +155,7 @@ export default function Reports() {
               {data.byDepartment.length === 0
                 ? <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Không có dữ liệu trong kỳ.</div>
                 : data.byDepartment.map((d: ReportDeptRow) => (
-                    <BarRow key={`${d.deptId}`} label={d.deptName} count={d.count} share={d.share} />
+                    <BarRow key={d.deptId != null ? String(d.deptId) : 'no-dept'} label={d.deptName} count={d.count} share={d.share} />
                   ))}
             </div>
           </div>

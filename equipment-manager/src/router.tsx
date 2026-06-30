@@ -9,7 +9,6 @@ import Allocate from '@/pages/Allocate'
 import Reports from '@/pages/Reports'
 import Catalog from '@/pages/Catalog'
 import Settings from '@/pages/Settings'
-import { Placeholder } from '@/components/Placeholder'
 
 export const router = createHashRouter([
   {
