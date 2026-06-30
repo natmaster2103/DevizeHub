@@ -21,8 +21,8 @@ describe('request status', () => {
     expect(REQUEST_STATUS_LABELS.pending).toBe('Chưa cấp phát')
     expect(requestBadgeStyle('pending').fg).toBe('#64748b')
   })
-  it('maps allocated to Đang trang bị with blue', () => {
-    expect(REQUEST_STATUS_LABELS.allocated).toBe('Đang trang bị')
+  it('maps allocated to Đang cho mượn with blue', () => {
+    expect(REQUEST_STATUS_LABELS.allocated).toBe('Đang cho mượn')
     expect(requestBadgeStyle('allocated').fg).toBe('#2563eb')
   })
   it('maps completed to Hoàn tất with green', () => {
