@@ -9,6 +9,7 @@ export const CHANNELS = {
   devicesChangeStatus: 'devices.changeStatus',
   devicesDelete: 'devices.delete',
   dashboardSummary: 'dashboard.summary',
+  reportsSummary: 'reports.summary',
   requestsList: 'requests.list',
   requestsGet: 'requests.get',
   requestsReturn: 'requests.return',
@@ -176,6 +177,20 @@ export interface DashboardSummary {
   deptAllocTotal: number
 }
 
+// ── Reports ────────────────────────────────────────────────────────────────────
+export interface ReportArgs { from: string; to: string }
+export interface ReportRequestRow { code: string; deptName: string; allocationCount: number }
+export interface ReportGroupRow { groupId: number | null; groupName: string; count: number; share: number }
+export interface ReportDeptRow { deptId: number | null; deptName: string; count: number; share: number }
+export interface ReportSummary {
+  range: { from: string; to: string }
+  requestCount: number
+  requests: ReportRequestRow[]
+  totalAllocations: number
+  byGroup: ReportGroupRow[]
+  byDepartment: ReportDeptRow[]
+}
+
 // ── Catalog ──────────────────────────────────────────────────────────────────
 export interface CategoryRow { id: number; name: string; minStock: number }
 export interface DepartmentRow { id: number; name: string }
@@ -326,6 +341,9 @@ export interface Api {
   }
   dashboard: {
     summary(): Promise<ApiResponse<DashboardSummary>>
+  }
+  reports: {
+    summary(args: ReportArgs): Promise<ApiResponse<ReportSummary>>
   }
   requests: {
     list(args: RequestListArgs): Promise<ApiResponse<RequestListResult>>

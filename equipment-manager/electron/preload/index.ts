@@ -18,6 +18,9 @@ const api: Api = {
   dashboard: {
     summary: () => ipcRenderer.invoke(CHANNELS.dashboardSummary)
   },
+  reports: {
+    summary: (args) => ipcRenderer.invoke(CHANNELS.reportsSummary, args),
+  },
   requests: {
     list: (args) => ipcRenderer.invoke(CHANNELS.requestsList, args),
     get: (args) => ipcRenderer.invoke(CHANNELS.requestsGet, args),

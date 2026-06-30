@@ -5,6 +5,7 @@ export const api: Api = {
   get auth() { return window.api.auth },
   get devices() { return window.api.devices },
   get dashboard() { return window.api.dashboard },
+  get reports() { return window.api.reports },
   get requests() { return window.api.requests },
   get allocate() { return window.api.allocate },
   get catalog() { return window.api.catalog },
