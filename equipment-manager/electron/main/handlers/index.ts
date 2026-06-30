@@ -5,6 +5,7 @@ import { CHANNELS } from '@shared/ipc'
 import { makeAuthHandlers } from './auth'
 import { makeDeviceHandlers } from './devices'
 import { makeDashboardHandlers } from './dashboard'
+import { makeReportHandlers } from './reports'
 import { makeRequestHandlers } from './requests'
 import { makeAllocateHandlers } from './allocate'
 import { makeCatalogHandlers } from './catalog'
@@ -19,6 +20,7 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   const auth = makeAuthHandlers(db)
   const devicesH = makeDeviceHandlers(db)
   const dashboard = makeDashboardHandlers(db)
+  const reportsH = makeReportHandlers(db)
   const requestsH = makeRequestHandlers(db)
   const allocateH = makeAllocateHandlers(db)
   const catalogH = makeCatalogHandlers(db, app?.getPath?.('userData'))
@@ -35,6 +37,7 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.devicesChangeStatus, (_e, args) => auth_guard(() => devicesH.changeStatus(args)))
   ipcMain.handle(CHANNELS.devicesDelete, (_e, args) => auth_guard(() => devicesH.delete(args)))
   ipcMain.handle(CHANNELS.dashboardSummary, () => auth_guard(() => dashboard.summary()))
+  ipcMain.handle(CHANNELS.reportsSummary, (_e, args) => auth_guard(() => reportsH.summary(args)))
   ipcMain.handle(CHANNELS.requestsList, (_e, args) => auth_guard(() => requestsH.list(args)))
   ipcMain.handle(CHANNELS.requestsGet, (_e, args) => auth_guard(() => requestsH.get(args)))
   ipcMain.handle(CHANNELS.requestsReturn, (_e, args) => auth_guard(() => requestsH.returnDevice(args)))
