@@ -96,11 +96,14 @@ describe('reports.summary', () => {
     expect(res.data.totalAllocations).toBe(0)
     expect(res.data.byGroup).toEqual([])
     expect(res.data.byDepartment).toEqual([])
+    expect(res.data.requests).toEqual([])
   })
 
   it('args thiếu from/to → trả lỗi', async () => {
     const { reports } = setup()
     const res = await reports.summary({ from: '', to: '' })
     expect(res.ok).toBe(false)
+    if (res.ok) return
+    expect(res.error.message).toBe('Khoảng thời gian không hợp lệ.')
   })
 })

@@ -1,4 +1,4 @@
-import { and, gte, lt, eq } from 'drizzle-orm'
+import { and, gte, lt, eq, sql, isNotNull } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import { requests, allocations, devices, deviceGroups, departments } from '../db/schema'
 import type {
@@ -27,11 +27,16 @@ export function makeReportHandlers(db: AppDb) {
         .all()
 
       // Số lượt cấp phát theo từng phiếu = TẤT CẢ allocation của phiếu (không giới hạn ngày)
-      const allAllocReq = db.select({ requestId: allocations.requestId }).from(allocations).all()
+      const countRows = db
+        .select({ requestId: allocations.requestId, count: sql<number>`count(*)` })
+        .from(allocations)
+        .where(isNotNull(allocations.requestId))
+        .groupBy(allocations.requestId)
+        .all()
       const countByReq = new Map<number, number>()
-      for (const a of allAllocReq) {
-        if (a.requestId == null) continue
-        countByReq.set(a.requestId, (countByReq.get(a.requestId) ?? 0) + 1)
+      for (const r of countRows) {
+        if (r.requestId == null) continue
+        countByReq.set(r.requestId, r.count)
       }
 
       const requestRows: ReportRequestRow[] = [...reqRows]
