@@ -3,7 +3,7 @@ import { isNull, eq, and } from 'drizzle-orm'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
-import { allocations, devices } from '../db/schema'
+import { allocations, devices, employees } from '../db/schema'
 import { session } from '../session'
 import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeAllocateHandlers } from './allocate'
@@ -64,5 +64,27 @@ describe('allocations.borrower_name column', () => {
     }).run()
     const row = db.select().from(allocations).where(eq(allocations.deviceId, dev!.id)).get()
     expect(row!.borrowerName).toBe('Người Test')
+  })
+})
+
+describe('allocate.create', () => {
+  it('snapshots the selected employee name into borrower_name', async () => {
+    const { db, alloc } = setup()
+    const emp = db.select({ id: employees.id, name: employees.name, departmentId: employees.departmentId })
+      .from(employees).get()
+    const res = await alloc.create({
+      deviceSku: 'LAP-0024',
+      employeeId: emp!.id,
+      departmentId: emp!.departmentId!,
+      dueDate: null,
+      requestId: null,
+      conditionOut: '',
+      notes: '',
+    })
+    expect(res.ok).toBe(true)
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    const alc = db.select().from(allocations).where(eq(allocations.deviceId, dev!.id)).get()
+    expect(alc!.borrowerName).toBe(emp!.name)
+    expect(alc!.notes).toBeNull()
   })
 })

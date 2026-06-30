@@ -92,6 +92,12 @@ export function makeAllocateHandlers(db: AppDb) {
         return { ok: false, error: { code: 'CONFLICT', message: 'Thiết bị không còn trong kho.' } }
       }
 
+      const emp = db
+        .select({ name: employees.name })
+        .from(employees)
+        .where(eq(employees.id, args.employeeId))
+        .all()[0]
+
       const now = new Date().toISOString()
 
       db.insert(allocations)
@@ -104,6 +110,7 @@ export function makeAllocateHandlers(db: AppDb) {
           issuedAt: now,
           dueDate: args.dueDate || null,
           conditionOut: args.conditionOut || null,
+          borrowerName: emp?.name ?? null,
           notes: args.notes || null,
         })
         .run()
