@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { IconEdit, IconPlus, IconTrash } from '@/lib/icons'
 import type { AppUserRow, SaveUserArgs, Role, Permission } from '@shared/ipc'
 import { ALL_PERMISSIONS } from '@shared/ipc'
+import { ImportDevicesDialog } from '@/components/ImportDevicesDialog'
 
 const PERMISSION_LABELS: Record<Permission, string> = {
   allocate: 'Cấp phát thiết bị',
@@ -556,6 +557,53 @@ function ResetDataSection() {
   )
 }
 
+// ── Batch import section ──────────────────────────────────────────────────────
+function ImportSection() {
+  const { hasPermission } = useAuth()
+  const qc = useQueryClient()
+  const [showDialog, setShowDialog] = useState(false)
+
+  if (!hasPermission('edit_device')) return null
+
+  function handleImported() {
+    qc.invalidateQueries({ queryKey: ['devices'] })
+    qc.invalidateQueries({ queryKey: ['dashboard'] })
+    setShowDialog(false)
+  }
+
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Nhập thiết bị hàng loạt</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            Tải template Excel, điền thông tin và nhập nhiều thiết bị cùng lúc.
+          </div>
+        </div>
+        <button
+          onClick={() => setShowDialog(true)}
+          style={{
+            height: 36, padding: '0 14px',
+            border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+            background: 'none', color: 'var(--text)',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+        >
+          ↑ Nhập Excel / CSV
+        </button>
+      </div>
+      {showDialog && (
+        <ImportDevicesDialog
+          onClose={() => setShowDialog(false)}
+          onImported={handleImported}
+        />
+      )}
+    </>
+  )
+}
+
 // ── Main Settings page ────────────────────────────────────────────────────────
 export default function Settings() {
   const { isAdmin } = useAuth()
@@ -575,6 +623,10 @@ export default function Settings() {
       <SectionCard title="Cơ sở dữ liệu">
         <DbInfoSection />
         {isAdmin && <ResetDataSection />}
+      </SectionCard>
+
+      <SectionCard title="Nhập dữ liệu">
+        <ImportSection />
       </SectionCard>
     </div>
   )
