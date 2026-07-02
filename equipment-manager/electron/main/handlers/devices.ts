@@ -566,7 +566,9 @@ export function makeDeviceHandlers(db: AppDb) {
           const grp = grpByName.get(groupName.toLowerCase())
           if (!grp) {
             error = `Nhóm không tồn tại: "${groupName}"`
-          } else if (categoryId != null && grp.categoryId !== categoryId) {
+          } else if (categoryId == null) {
+            error = `Phải nhập Loại khi có Nhóm: "${groupName}"`
+          } else if (grp.categoryId !== categoryId) {
             error = `Nhóm không thuộc loại đã chọn: "${groupName}"`
           } else {
             groupId = grp.id

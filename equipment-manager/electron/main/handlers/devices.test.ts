@@ -596,6 +596,26 @@ describe('devices.previewImport', () => {
     const res = await h.previewImport({ filePath: '/no/such/file.xlsx' })
     expect(res.ok).toBe(false)
   })
+
+  it('marks group-without-category as invalid', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const catalogH = makeCatalogHandlers(db)
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catId = cats.data.categories[0].id
+    await catalogH.saveGroup({ name: 'GrpNoCategory', categoryId: catId })
+    const h = makeDeviceHandlers(db)
+    const p = makeTempXlsx([HEADERS, ['GNC-001', 'Device', '', 'GrpNoCategory', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/Loại/)
+    } finally { fs.unlinkSync(p) }
+  })
 })
 
 describe('devices.importBatch', () => {
