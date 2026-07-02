@@ -8,6 +8,9 @@ export const CHANNELS = {
   devicesUpdate: 'devices.update',
   devicesChangeStatus: 'devices.changeStatus',
   devicesDelete: 'devices.delete',
+  devicesDownloadTemplate: 'devices.downloadTemplate',
+  devicesPreviewImport: 'devices.previewImport',
+  devicesImportBatch: 'devices.importBatch',
   dashboardSummary: 'dashboard.summary',
   reportsSummary: 'reports.summary',
   requestsList: 'requests.list',
@@ -151,6 +154,36 @@ export interface DeviceChangeStatusArgs {
 }
 
 export interface DeviceDeleteArgs { sku: string }
+
+export interface DownloadTemplateResult { saved: boolean }
+
+export interface PreviewImportArgs { filePath: string }
+export interface PreviewRow {
+  rowNum: number
+  sku: string
+  name: string
+  category: string
+  group: string
+  categoryId: number | null
+  groupId: number | null
+  serialNumber: string | null
+  notes: string | null
+  valid: boolean
+  error: string | null
+}
+export interface PreviewImportResult { rows: PreviewRow[] }
+
+export interface ImportBatchArgs {
+  rows: Array<{
+    sku: string
+    name: string
+    categoryId: number | null
+    groupId: number | null
+    serialNumber: string | null
+    notes: string | null
+  }>
+}
+export interface ImportBatchResult { imported: number }
 
 export interface DeptCardItem {
   allocationId: number
@@ -338,6 +371,9 @@ export interface Api {
     update(args: DeviceUpdateArgs): Promise<ApiResponse<{ ok: true }>>
     changeStatus(args: DeviceChangeStatusArgs): Promise<ApiResponse<{ ok: true }>>
     delete(args: DeviceDeleteArgs): Promise<ApiResponse<{ ok: true }>>
+    downloadTemplate(): Promise<ApiResponse<DownloadTemplateResult>>
+    previewImport(args: PreviewImportArgs): Promise<ApiResponse<PreviewImportResult>>
+    importBatch(args: ImportBatchArgs): Promise<ApiResponse<ImportBatchResult>>
   }
   dashboard: {
     summary(): Promise<ApiResponse<DashboardSummary>>

@@ -14,6 +14,9 @@ const api: Api = {
     update: (args) => ipcRenderer.invoke(CHANNELS.devicesUpdate, args),
     changeStatus: (args) => ipcRenderer.invoke(CHANNELS.devicesChangeStatus, args),
     delete: (args) => ipcRenderer.invoke(CHANNELS.devicesDelete, args),
+    downloadTemplate: () => ipcRenderer.invoke(CHANNELS.devicesDownloadTemplate),
+    previewImport: (args) => ipcRenderer.invoke(CHANNELS.devicesPreviewImport, args),
+    importBatch: (args) => ipcRenderer.invoke(CHANNELS.devicesImportBatch, args),
   },
   dashboard: {
     summary: () => ipcRenderer.invoke(CHANNELS.dashboardSummary)
