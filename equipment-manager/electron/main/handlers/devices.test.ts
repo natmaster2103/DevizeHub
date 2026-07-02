@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { eq } from 'drizzle-orm'
+import * as XLSX from 'xlsx'
+import * as os from 'node:os'
+import * as nodePath from 'node:path'
+import * as fs from 'node:fs'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
-import { devices, allocations } from '../db/schema'
+import { devices, allocations, categories } from '../db/schema'
 import { session } from '../session'
 import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeDeviceHandlers } from './devices'
@@ -460,6 +464,172 @@ describe('devices — permission enforcement', () => {
     }
     const h = makeDeviceHandlers(db)
     const res = await h.create({ sku: 'X-001', name: 'Test', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('FORBIDDEN')
+  })
+})
+
+function makeTempXlsx(rows: (string | number | null)[][]): string {
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Sheet1')
+  const p = nodePath.join(os.tmpdir(), `test-import-${Date.now()}.xlsx`)
+  XLSX.writeFile(wb, p)
+  return p
+}
+
+const HEADERS = ['SKU', 'Tên thiết bị', 'Loại', 'Nhóm', 'Số serial', 'Ghi chú']
+
+describe('devices.previewImport', () => {
+  it('returns valid row for a correct new device', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS, ['IMP-001', 'Laptop Test', '', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows.length).toBe(1)
+      expect(res.data.rows[0].valid).toBe(true)
+      expect(res.data.rows[0].error).toBeNull()
+      expect(res.data.rows[0].sku).toBe('IMP-001')
+      expect(res.data.rows[0].rowNum).toBe(2)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks row with empty SKU as invalid', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS, ['', 'Laptop Test', '', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/SKU/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks row with empty name as invalid', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS, ['IMP-002', '', '', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/Tên/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks duplicate SKU within file as invalid', async () => {
+    const h = setup()
+    const p = makeTempXlsx([
+      HEADERS,
+      ['DUP-001', 'Device A', '', '', '', ''],
+      ['DUP-001', 'Device B', '', '', '', ''],
+    ])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(true)
+      expect(res.data.rows[1].valid).toBe(false)
+      expect(res.data.rows[1].error).toMatch(/trùng lặp/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks SKU that already exists in DB as invalid', async () => {
+    const h = setup()
+    // LAP-0012 exists in seed data
+    const p = makeTempXlsx([HEADERS, ['LAP-0012', 'Some Name', '', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/tồn tại/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('resolves a known category name to categoryId', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    // Get a real category name from seed
+    const cats = db.select({ name: categories.name, id: categories.id }).from(categories).all()
+    if (cats.length === 0) return
+    const cat = cats[0]
+    const h = makeDeviceHandlers(db)
+    const p = makeTempXlsx([HEADERS, ['CAT-001', 'Device', cat.name, '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(true)
+      expect(res.data.rows[0].categoryId).toBe(cat.id)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks non-existent category name as invalid', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS, ['CAT-002', 'Device', 'LoạiKhôngTồnTại', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/Loại thiết bị không tồn tại/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('returns ok with empty rows for header-only file', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows.length).toBe(0)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('returns error for a non-existent file path', async () => {
+    const h = setup()
+    const res = await h.previewImport({ filePath: '/no/such/file.xlsx' })
+    expect(res.ok).toBe(false)
+  })
+})
+
+describe('devices.importBatch', () => {
+  it('inserts all valid rows and returns count', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const h = makeDeviceHandlers(db)
+    const res = await h.importBatch({
+      rows: [
+        { sku: 'BATCH-001', name: 'Device 1', categoryId: null, groupId: null, serialNumber: null, notes: null },
+        { sku: 'BATCH-002', name: 'Device 2', categoryId: null, groupId: null, serialNumber: 'SN-X', notes: 'note' },
+      ]
+    })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.data.imported).toBe(2)
+    const rows = db.select({ sku: devices.sku }).from(devices).where(eq(devices.sku, 'BATCH-001')).all()
+    expect(rows.length).toBe(1)
+  })
+
+  it('returns imported=0 and succeeds for empty rows array', async () => {
+    const h = setup()
+    const res = await h.importBatch({ rows: [] })
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data.imported).toBe(0)
+  })
+
+  it('rejects importBatch without edit_device permission', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 2, username: 'staff', role: 'staff', displayName: 'Staff', permissions: ['view_reports'], groupIds: [] }
+    const h = makeDeviceHandlers(db)
+    const res = await h.importBatch({ rows: [{ sku: 'X', name: 'X', categoryId: null, groupId: null, serialNumber: null, notes: null }] })
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.error.code).toBe('FORBIDDEN')
   })

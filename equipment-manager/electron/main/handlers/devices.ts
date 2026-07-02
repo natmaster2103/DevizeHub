@@ -1,5 +1,6 @@
 import { eq, isNull, and } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
+import * as XLSX from 'xlsx'
 import type { AppDb } from '../db'
 import { requirePermission } from './settings'
 import {
@@ -27,6 +28,12 @@ import type {
   DeviceUpdateArgs,
   DeviceChangeStatusArgs,
   DeviceDeleteArgs,
+  DownloadTemplateResult,
+  PreviewImportArgs,
+  PreviewImportResult,
+  PreviewRow,
+  ImportBatchArgs,
+  ImportBatchResult,
 } from '@shared/ipc'
 
 const STATUS_KEYS: Array<'all' | DeviceStatus> = [
@@ -470,6 +477,132 @@ export function makeDeviceHandlers(db: AppDb) {
         tx.delete(devices).where(eq(devices.id, device.id)).run()
       })
       return { ok: true, data: { ok: true } }
+    },
+
+    async downloadTemplate(): Promise<ApiResponse<DownloadTemplateResult>> {
+      const forbidden = requirePermission('edit_device')
+      if (forbidden) return forbidden
+      // Lazy require so module stays unit-testable (dialog is Electron-only runtime)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { dialog } = require('electron') as typeof import('electron')
+
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet([
+        ['SKU', 'Tên thiết bị', 'Loại', 'Nhóm', 'Số serial', 'Ghi chú'],
+        ['TB-001', 'Laptop Dell XPS 15', 'Laptop', 'Dell', 'SN123456', 'Ghi chú tùy chọn'],
+      ])
+      ws['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 30 }]
+      XLSX.utils.book_append_sheet(wb, ws, 'Thiết bị')
+
+      const result = await dialog.showSaveDialog({
+        title: 'Lưu template nhập thiết bị',
+        defaultPath: 'template_nhap_thiet_bi.xlsx',
+        filters: [{ name: 'Excel', extensions: ['xlsx'] }],
+      })
+      if (result.canceled || !result.filePath) return { ok: true, data: { saved: false } }
+      XLSX.writeFile(wb, result.filePath)
+      return { ok: true, data: { saved: true } }
+    },
+
+    async previewImport(args: PreviewImportArgs): Promise<ApiResponse<PreviewImportResult>> {
+      const forbidden = requirePermission('edit_device')
+      if (forbidden) return forbidden
+
+      let workbook: XLSX.WorkBook
+      try {
+        workbook = XLSX.readFile(args.filePath)
+      } catch {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Không thể đọc file. Vui lòng kiểm tra định dạng file (.xlsx, .xls, .csv).' } }
+      }
+
+      const sheetName = workbook.SheetNames[0]
+      const sheet = workbook.Sheets[sheetName]
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
+
+      const allCats = db.select({ id: categories.id, name: categories.name }).from(categories).all()
+      const allGroups = db.select({ id: deviceGroups.id, name: deviceGroups.name, categoryId: deviceGroups.categoryId }).from(deviceGroups).all()
+      const catByName = new Map(allCats.map(c => [c.name.trim().toLowerCase(), c]))
+      const grpByName = new Map(allGroups.map(g => [g.name.trim().toLowerCase(), g]))
+
+      const skusInFile = new Map<string, number>() // lowercase sku → first rowNum
+
+      const rows: PreviewRow[] = rawRows.map((raw, idx) => {
+        const rowNum = idx + 2
+        const sku = String(raw['SKU'] ?? '').trim()
+        const name = String(raw['Tên thiết bị'] ?? '').trim()
+        const categoryName = String(raw['Loại'] ?? '').trim()
+        const groupName = String(raw['Nhóm'] ?? '').trim()
+        const serialNumber = String(raw['Số serial'] ?? '').trim() || null
+        const notes = String(raw['Ghi chú'] ?? '').trim() || null
+
+        let categoryId: number | null = null
+        let groupId: number | null = null
+        let error: string | null = null
+
+        if (!sku) {
+          error = 'SKU không được để trống'
+        } else if (!name) {
+          error = 'Tên thiết bị không được để trống'
+        } else if (skusInFile.has(sku.toLowerCase())) {
+          error = `SKU bị trùng lặp trong file (dòng ${skusInFile.get(sku.toLowerCase())})`
+        } else {
+          skusInFile.set(sku.toLowerCase(), rowNum)
+          const existing = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, sku)).all()[0]
+          if (existing) {
+            error = `SKU đã tồn tại trong hệ thống`
+          }
+        }
+
+        if (!error && categoryName) {
+          const cat = catByName.get(categoryName.toLowerCase())
+          if (!cat) {
+            error = `Loại thiết bị không tồn tại: "${categoryName}"`
+          } else {
+            categoryId = cat.id
+          }
+        }
+
+        if (!error && groupName) {
+          const grp = grpByName.get(groupName.toLowerCase())
+          if (!grp) {
+            error = `Nhóm không tồn tại: "${groupName}"`
+          } else if (categoryId != null && grp.categoryId !== categoryId) {
+            error = `Nhóm không thuộc loại đã chọn: "${groupName}"`
+          } else {
+            groupId = grp.id
+          }
+        }
+
+        return { rowNum, sku, name, category: categoryName, group: groupName, categoryId, groupId, serialNumber, notes, valid: error === null, error }
+      })
+
+      return { ok: true, data: { rows } }
+    },
+
+    async importBatch(args: ImportBatchArgs): Promise<ApiResponse<ImportBatchResult>> {
+      const forbidden = requirePermission('edit_device')
+      if (forbidden) return forbidden
+      if (!args?.rows?.length) return { ok: true, data: { imported: 0 } }
+
+      const now = new Date().toISOString()
+      let imported = 0
+      db.transaction((tx) => {
+        for (const row of args.rows) {
+          tx.insert(devices).values({
+            sku: row.sku.trim(),
+            name: row.name.trim(),
+            categoryId: row.categoryId,
+            serialNumber: row.serialNumber?.trim() || null,
+            notes: row.notes?.trim() || null,
+            groupId: row.groupId,
+            status: 'available',
+            createdAt: now,
+            updatedAt: now,
+          }).run()
+          imported++
+        }
+      })
+      return { ok: true, data: { imported } }
     },
   }
 }
