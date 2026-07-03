@@ -14,6 +14,7 @@ import type {
   DeptCard,
   DeptCardRequest,
   DeptCardItem,
+  RequestStatus,
 } from '@shared/ipc'
 
 export function makeDashboardHandlers(db: AppDb) {
@@ -56,6 +57,7 @@ export function makeDashboardHandlers(db: AppDb) {
           departmentId: requests.departmentId,
           employeeId: requests.employeeId,
           createdBy: requests.createdBy,
+          status: requests.status,
         })
         .from(requests)
         .all()
@@ -106,18 +108,18 @@ export function makeDashboardHandlers(db: AppDb) {
 
       for (const req of allRequests) {
         if (req.departmentId == null) continue
-        const reqAllocs = requestAllocMap.get(req.id) ?? []
-        if (reqAllocs.length === 0) continue
+        // Completed requests are done — hide them from the dashboard entirely.
+        if (req.status === 'completed') continue
 
-        const hasActiveAlloc = reqAllocs.some((a) => a.returnedAt === null)
-        const status: 'allocated' | 'completed' = hasActiveAlloc ? 'allocated' : 'completed'
+        const reqAllocs = requestAllocMap.get(req.id) ?? []
         const activeCount = reqAllocs.filter((a) => a.returnedAt === null).length
 
         const group = deptGroups.get(req.departmentId)
         if (!group) continue
         group.activeCount += activeCount
 
-        // Build items — only show allocations that have not been returned yet
+        // Build items — only show allocations that have not been returned yet.
+        // A brand-new (pending) request has no allocations yet, so this is [].
         const items: DeptCardItem[] = reqAllocs
           .filter((a) => a.returnedAt === null)
           .map((a) => {
@@ -134,15 +136,15 @@ export function makeDashboardHandlers(db: AppDb) {
             }
           })
 
-        // Chips only show requests that are currently allocated ("đang trang bị")
-        if (status === 'allocated') {
-          group.requestCards.push({
-            code: req.code ?? '',
-            date: fmtDate(req.createdAt),
-            status,
-            items,
-          })
-        }
+        // Chips show every non-completed request (pending or allocated) so a
+        // freshly created request is immediately a valid drag-and-drop target.
+        group.requestCards.push({
+          id: req.id,
+          code: req.code ?? '',
+          date: fmtDate(req.createdAt),
+          status: req.status as RequestStatus,
+          items,
+        })
       }
 
       const sortedGroups = [...deptGroups.values()]

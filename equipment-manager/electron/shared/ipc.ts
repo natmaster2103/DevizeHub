@@ -194,7 +194,7 @@ export interface DeptCardItem {
   lender: string
   returnable: boolean
 }
-export interface DeptCardRequest { code: string; date: string; status: RequestStatus; items: DeptCardItem[] }
+export interface DeptCardRequest { id: number; code: string; date: string; status: RequestStatus; items: DeptCardItem[] }
 export interface DeptCard {
   dept: string
   deptId: number | null

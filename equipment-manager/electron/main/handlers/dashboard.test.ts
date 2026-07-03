@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
-import { requests, allocations, devices } from '../db/schema'
+import { requests, allocations, devices, departments } from '../db/schema'
 import { session } from '../session'
 import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeDashboardHandlers } from './dashboard'
@@ -39,14 +39,54 @@ describe('dashboard.summary', () => {
     }
   })
 
-  it('only includes requests with allocated status in dept card chips', async () => {
+  it('includes pending and allocated requests as chips, excludes completed', async () => {
     const { dash } = setup()
     const res = await dash.summary()
     expect(res.ok).toBe(true)
     if (!res.ok) return
     const allRequests = res.data.deptCards.flatMap((c) => c.requests)
     expect(allRequests.length).toBeGreaterThan(0)
-    expect(allRequests.every((r) => r.status === 'allocated')).toBe(true)
+    expect(allRequests.every((r) => r.status === 'pending' || r.status === 'allocated')).toBe(true)
+
+    // DX-293 is seeded as 'pending' with zero allocations — it must still show
+    // as an empty, droppable chip (this is the whole point of the feature).
+    const dx293 = allRequests.find((r) => r.code === 'DX-293')
+    expect(dx293).toBeDefined()
+    expect(dx293!.items).toEqual([])
+
+    // DX-298/DX-295/DX-290 are seeded 'completed' — must not appear as chips.
+    expect(allRequests.find((r) => r.code === 'DX-298')).toBeUndefined()
+    expect(allRequests.find((r) => r.code === 'DX-295')).toBeUndefined()
+    expect(allRequests.find((r) => r.code === 'DX-290')).toBeUndefined()
+  })
+
+  it('request chips expose a numeric request id matching the requests table', async () => {
+    const { db, dash } = setup()
+    const res = await dash.summary()
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const dx301Chip = res.data.deptCards.flatMap((c) => c.requests).find((r) => r.code === 'DX-301')
+    expect(dx301Chip).toBeDefined()
+    const dx301Row = db.select({ id: requests.id }).from(requests).where(eq(requests.code, 'DX-301')).get()
+    expect(dx301Chip!.id).toBe(dx301Row!.id)
+  })
+
+  it('a freshly created request with zero allocations appears as an empty pending chip', async () => {
+    const { db, dash, req } = setup()
+    const deptId = db.select({ id: departments.id }).from(departments).all()[0].id
+    const created = await req.create({ code: 'NEW-CHIP', departmentId: deptId, createdAt: null, notes: null })
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+
+    const res = await dash.summary()
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const card = res.data.deptCards.find((c) => c.deptId === deptId)
+    const chip = card?.requests.find((r) => r.code === 'NEW-CHIP')
+    expect(chip).toBeDefined()
+    expect(chip!.status).toBe('pending')
+    expect(chip!.id).toBe(created.data.id)
+    expect(chip!.items).toEqual([])
   })
 
   it('returns a card for every department, including ones with no active allocations', async () => {
@@ -85,17 +125,21 @@ describe('dashboard.summary', () => {
   it('quick-allocated device shows borrowerName from notes, not empty string', async () => {
     const { db, dash, alloc } = setup()
 
-    // DX-295 is a seed request (Phòng Nhân sự) with no allocations — safe to add one
-    const dx295 = db.select({ id: requests.id, departmentId: requests.departmentId })
-      .from(requests).where(eq(requests.code, 'DX-295')).get()
-    expect(dx295).toBeDefined()
+    // DX-293 is a seed request with no allocations — safe to add one.
+    // (DX-295 was used previously, but it's seeded as 'completed', and completed
+    // requests are now correctly hidden from dept card chips regardless of any
+    // allocation later attached to them — see Task 3. DX-293 is seeded 'pending'
+    // with zero items, so it stays visible as a chip after this quick-allocate.)
+    const dx293 = db.select({ id: requests.id, departmentId: requests.departmentId })
+      .from(requests).where(eq(requests.code, 'DX-293')).get()
+    expect(dx293).toBeDefined()
 
-    // Quick-allocate LAP-0024 (MacBook Air M2 — never allocated in seed) linked to DX-295
+    // Quick-allocate LAP-0024 (MacBook Air M2 — never allocated in seed) linked to DX-293
     const res = await alloc.quickAllocate({
       deviceSkus: ['LAP-0024'],
-      departmentId: dx295!.departmentId!,
+      departmentId: dx293!.departmentId!,
       borrowerName: 'Nguyễn Văn Test',
-      requestId: dx295!.id,
+      requestId: dx293!.id,
       notes: null,
     })
     expect(res.ok).toBe(true)
