@@ -309,6 +309,7 @@ export function seedIfEmpty(db: AppDb): void {
         requester: 'Nguyễn Văn An',
         date: '12/03/2026',
         vnStatus: 'Đang trang bị',
+        status: 'allocated',
         notes: 'Trang bị cho 2 nhân viên mới phòng Kế toán.',
         lender: 'Đặng Văn Phúc',
         items: [
@@ -331,6 +332,7 @@ export function seedIfEmpty(db: AppDb): void {
         requester: 'Vũ Minh Đức',
         date: '09/03/2026',
         vnStatus: 'Đang trang bị',
+        status: 'allocated',
         notes: 'Bổ sung điện thoại cho đội sales thị trường.',
         lender: 'Đặng Văn Phúc',
         items: [
@@ -344,6 +346,7 @@ export function seedIfEmpty(db: AppDb): void {
         requester: 'Đặng Văn Phúc',
         date: '03/03/2026',
         vnStatus: 'Hoàn tất',
+        status: 'completed',
         notes: 'Nâng cấp thiết bị mạng tầng 3.',
         lender: 'Trần Quốc Bảo',
         items: [
@@ -361,6 +364,7 @@ export function seedIfEmpty(db: AppDb): void {
         requester: 'Hoàng Thị Em',
         date: '24/02/2026',
         vnStatus: 'Hoàn tất',
+        status: 'completed',
         notes: '',
         lender: 'Đặng Văn Phúc',
         items: [],
@@ -371,6 +375,7 @@ export function seedIfEmpty(db: AppDb): void {
         requester: 'Phạm Thị Dung',
         date: '18/02/2026',
         vnStatus: 'Đang xử lý',
+        status: 'pending',
         notes: 'Chờ duyệt ngân sách quý 1.',
         lender: 'Đặng Văn Phúc',
         items: [],
@@ -381,6 +386,7 @@ export function seedIfEmpty(db: AppDb): void {
         requester: 'Lê Hoàng Cường',
         date: '10/02/2026',
         vnStatus: 'Hoàn tất',
+        status: 'completed',
         notes: '',
         lender: 'Đặng Văn Phúc',
         items: [
@@ -406,6 +412,7 @@ export function seedIfEmpty(db: AppDb): void {
           createdBy: adminUser.id,
           createdAt,
           notes: req.notes || null,
+          status: req.status,
         })
         .returning({ id: requests.id })
         .all()

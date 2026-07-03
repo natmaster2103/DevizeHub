@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import { createDb } from './index'
 import { runMigrations } from './migrate'
 import { seedIfEmpty } from './seed'
-import { appUsers, devices, departments } from './schema'
+import { appUsers, devices, departments, requests } from './schema'
 import { eq } from 'drizzle-orm'
 
 function freshSeededDb() {
@@ -45,5 +45,19 @@ describe('seedIfEmpty', () => {
     seedIfEmpty(db)
     seedIfEmpty(db)
     expect(db.select().from(devices).all().length).toBe(12)
+  })
+
+  it('sets a real requests.status per seeded request, not just the schema default', () => {
+    const db = freshSeededDb()
+    const byCode = new Map(
+      db.select({ code: requests.code, status: requests.status }).from(requests).all()
+        .map((r) => [r.code, r.status]),
+    )
+    expect(byCode.get('DX-301')).toBe('allocated')
+    expect(byCode.get('DX-300')).toBe('allocated')
+    expect(byCode.get('DX-298')).toBe('completed')
+    expect(byCode.get('DX-295')).toBe('completed')
+    expect(byCode.get('DX-293')).toBe('pending')
+    expect(byCode.get('DX-290')).toBe('completed')
   })
 })
