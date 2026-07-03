@@ -333,7 +333,7 @@ export interface ReturnDeviceArgs { allocationId: number; condition: string; not
 
 export interface AddToRequestArgs { requestId: number; deviceSkus: string[]; borrowerName: string }
 
-export interface AvailableDeviceRow { sku: string; name: string; category: string }
+export interface AvailableDeviceRow { sku: string; name: string; category: string; thumbnailPath: string | null }
 export interface AvailableDevicesResult { devices: AvailableDeviceRow[] }
 
 export interface CreateRequestArgs {

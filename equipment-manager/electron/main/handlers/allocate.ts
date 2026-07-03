@@ -1,6 +1,6 @@
 import { eq, inArray } from 'drizzle-orm'
 import type { AppDb } from '../db'
-import { devices, categories, allocations, employees, departments, requests } from '../db/schema'
+import { devices, categories, deviceGroups, allocations, employees, departments, requests } from '../db/schema'
 import { session } from '../session'
 import { requirePermission } from './settings'
 import type {
@@ -17,9 +17,15 @@ export function makeAllocateHandlers(db: AppDb) {
   return {
     async formData(): Promise<ApiResponse<AllocateFormData>> {
       const availableDevs = db
-        .select({ sku: devices.sku, name: devices.name, categoryName: categories.name })
+        .select({
+          sku: devices.sku,
+          name: devices.name,
+          categoryName: categories.name,
+          thumbnailPath: deviceGroups.thumbnailPath,
+        })
         .from(devices)
         .leftJoin(categories, eq(devices.categoryId, categories.id))
+        .leftJoin(deviceGroups, eq(devices.groupId, deviceGroups.id))
         .where(eq(devices.status, 'available'))
         .all()
 
@@ -52,6 +58,7 @@ export function makeAllocateHandlers(db: AppDb) {
             sku: d.sku,
             name: d.name,
             category: d.categoryName ?? '',
+            thumbnailPath: d.thumbnailPath ?? null,
           })),
           departments: depts.map<DepartmentRow>((d) => ({ id: d.id, name: d.name })),
           employees: emps.map<EmployeeRow>((e) => ({

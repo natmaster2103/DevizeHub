@@ -1,6 +1,6 @@
 import { eq, inArray, and, isNull } from 'drizzle-orm'
 import type { AppDb } from '../db'
-import { devices, categories, allocations, employees, departments, requests } from '../db/schema'
+import { devices, categories, deviceGroups, allocations, employees, departments, requests } from '../db/schema'
 import { session } from '../session'
 import { requirePermission } from './settings'
 import type {
@@ -266,16 +266,27 @@ export function makeRequestHandlers(db: AppDb) {
 
     async availableDevices(): Promise<ApiResponse<AvailableDevicesResult>> {
       const rows = db
-        .select({ sku: devices.sku, name: devices.name, categoryName: categories.name })
+        .select({
+          sku: devices.sku,
+          name: devices.name,
+          categoryName: categories.name,
+          thumbnailPath: deviceGroups.thumbnailPath,
+        })
         .from(devices)
         .leftJoin(categories, eq(devices.categoryId, categories.id))
+        .leftJoin(deviceGroups, eq(devices.groupId, deviceGroups.id))
         .where(eq(devices.status, 'available'))
         .all()
 
       return {
         ok: true,
         data: {
-          devices: rows.map((r) => ({ sku: r.sku, name: r.name, category: r.categoryName ?? '' })),
+          devices: rows.map((r) => ({
+            sku: r.sku,
+            name: r.name,
+            category: r.categoryName ?? '',
+            thumbnailPath: r.thumbnailPath ?? null,
+          })),
         },
       }
     },

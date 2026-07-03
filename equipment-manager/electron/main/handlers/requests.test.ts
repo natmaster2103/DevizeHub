@@ -5,7 +5,7 @@ import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
 import { makeRequestHandlers } from './requests'
 import { session } from '../session'
-import { departments, requests, devices, allocations } from '../db/schema'
+import { departments, requests, devices, allocations, categories, deviceGroups } from '../db/schema'
 import type { AppDb } from '../db'
 import { ALL_PERMISSIONS } from '@shared/ipc'
 
@@ -359,5 +359,47 @@ describe('requests status flow', () => {
     const got = await h.get({ id: reqId })
     expect(got.ok).toBe(true)
     if (got.ok) expect(got.data.lines[0].recipient).toBe('Cột Recipient')
+  })
+})
+
+// ── availableDevices: thumbnailPath ──────────────────────────────────────────
+describe('requests.availableDevices — thumbnailPath', () => {
+  beforeEach(() => { session.current = ADMIN_SESSION })
+
+  it('includes the device group thumbnail when the device has a group', async () => {
+    const db = freshDb()
+    const h = makeRequestHandlers(db)
+
+    const catId = db.select({ id: categories.id }).from(categories).all()[0].id
+    const [group] = db.insert(deviceGroups)
+      .values({ name: 'Test Group', categoryId: catId, thumbnailPath: '/tmp/thumb.png', createdAt: new Date().toISOString() })
+      .returning({ id: deviceGroups.id })
+      .all()
+
+    const avail = db.select({ id: devices.id, sku: devices.sku }).from(devices)
+      .where(eq(devices.status, 'available')).all()[0]
+    db.update(devices).set({ groupId: group.id }).where(eq(devices.id, avail.id)).run()
+
+    const res = await h.availableDevices()
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const row = res.data.devices.find((d) => d.sku === avail.sku)
+    expect(row).toBeDefined()
+    expect(row!.thumbnailPath).toBe('/tmp/thumb.png')
+  })
+
+  it('returns null thumbnailPath when the device has no group', async () => {
+    const db = freshDb()
+    const h = makeRequestHandlers(db)
+    const avail = db.select({ id: devices.id, sku: devices.sku }).from(devices)
+      .where(eq(devices.status, 'available')).all()[0]
+    db.update(devices).set({ groupId: null }).where(eq(devices.id, avail.id)).run()
+
+    const res = await h.availableDevices()
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const row = res.data.devices.find((d) => d.sku === avail.sku)
+    expect(row).toBeDefined()
+    expect(row!.thumbnailPath).toBeNull()
   })
 })
