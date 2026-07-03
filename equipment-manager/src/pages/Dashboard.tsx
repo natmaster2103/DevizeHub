@@ -3,11 +3,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDashboard } from '@/hooks/useDashboard'
 import type { DeptCard, DeptCardItem, DeptCardRequest, DashboardSummary, AvailableDeviceRow, QuickAllocateArgs, ReturnDeviceArgs } from '@shared/ipc'
 import {
-  IconBox, IconCheck, IconWrench, IconAlert, IconReturn, IconBuilding
+  IconBox, IconCheck, IconWrench, IconAlert, IconReturn, IconBuilding, IconPlus
 } from '@/lib/icons'
 import { AllocationDrawer } from '@/components/AllocationDrawer'
 import { ReturnDialog } from '@/components/ReturnDialog'
+import { CreateRequestDialog } from '@/components/CreateRequestDialog'
 import { api, unwrap } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 
 const PAGE_SIZE = 6
 
@@ -198,6 +200,8 @@ function DeptCardPanel({
   onDrop,
   onDragLeave,
   onReturnItem,
+  onCreateRequest,
+  canCreateRequest,
 }: {
   card: DeptCard
   isDrop?: boolean
@@ -205,6 +209,8 @@ function DeptCardPanel({
   onDrop?(): void
   onDragLeave?(): void
   onReturnItem?(item: DeptCardItem): void
+  onCreateRequest?(): void
+  canCreateRequest?: boolean
 }) {
   const firstCode = card.requests[0]?.code ?? ''
   const [activeCode, setActiveCode] = useState(firstCode)
@@ -261,6 +267,31 @@ function DeptCardPanel({
         <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-.02em', lineHeight: 1 }}>
           {card.count}
         </div>
+        {canCreateRequest && (
+          <button
+            onClick={onCreateRequest}
+            disabled={card.deptId == null}
+            title="Tạo phiếu"
+            style={{
+              width: 26, height: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+              background: 'none', color: card.deptId == null ? 'var(--text-muted)' : 'var(--text)',
+              cursor: card.deptId == null ? 'not-allowed' : 'pointer',
+              opacity: card.deptId == null ? 0.5 : 1,
+            }}
+            onMouseEnter={e => {
+              if (card.deptId == null) return
+              e.currentTarget.style.borderColor = 'var(--primary)'
+              e.currentTarget.style.color = 'var(--primary)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.color = 'var(--text)'
+            }}
+          >
+            <IconPlus size={14} />
+          </button>
+        )}
       </div>
 
       {!isLoose && card.requests.length === 0 ? (
@@ -461,8 +492,10 @@ function DeptCardPanel({
 export default function Dashboard() {
   const { data, isLoading, error } = useDashboard()
   const queryClient = useQueryClient()
+  const { hasPermission } = useAuth()
   const [lendOpen, setLendOpen] = useState(false)
   const [dropDept, setDropDept] = useState<string | null>(null)
+  const [createReqForDept, setCreateReqForDept] = useState<{ deptId: number; deptName: string } | null>(null)
   const dragStateRef = useRef<{ devices: AvailableDeviceRow[]; requestId: number | null } | null>(null)
   const [lendModal, setLendModal] = useState<{
     devices: AvailableDeviceRow[]
@@ -610,6 +643,10 @@ export default function Dashboard() {
                   key={card.dept}
                   card={card}
                   isDrop={dropDept === card.dept}
+                  canCreateRequest={hasPermission('create_request')}
+                  onCreateRequest={() => {
+                    if (card.deptId != null) setCreateReqForDept({ deptId: card.deptId, deptName: card.dept })
+                  }}
                   onDragOver={() => setDropDept(validDrop() ? card.dept : null)}
                   onDragLeave={() => setDropDept(null)}
                   onDrop={() => {
@@ -646,6 +683,13 @@ export default function Dashboard() {
         onClose={() => setLendOpen(false)}
         dragStateRef={dragStateRef}
       />
+
+      {createReqForDept && (
+        <CreateRequestDialog
+          presetDepartmentId={createReqForDept.deptId}
+          onClose={() => setCreateReqForDept(null)}
+        />
+      )}
 
       {returnTarget && (
         <ReturnDialog
