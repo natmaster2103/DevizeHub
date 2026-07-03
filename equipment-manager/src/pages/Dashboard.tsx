@@ -195,6 +195,8 @@ function LendConfirmDialog({
 
 function DeptCardPanel({
   card,
+  activeCode,
+  onActiveCodeChange,
   isDrop,
   onDragOver,
   onDrop,
@@ -204,6 +206,8 @@ function DeptCardPanel({
   canCreateRequest,
 }: {
   card: DeptCard
+  activeCode: string
+  onActiveCodeChange(code: string): void
   isDrop?: boolean
   onDragOver?(): void
   onDrop?(): void
@@ -212,8 +216,6 @@ function DeptCardPanel({
   onCreateRequest?(): void
   canCreateRequest?: boolean
 }) {
-  const firstCode = card.requests[0]?.code ?? ''
-  const [activeCode, setActiveCode] = useState(firstCode)
   const [page, setPage] = useState(1)
 
   const isLoose = card.kind === 'loose'
@@ -227,7 +229,7 @@ function DeptCardPanel({
   const hasPager = items.length > PAGE_SIZE
 
   function switchChip(code: string) {
-    setActiveCode(code)
+    onActiveCodeChange(code)
     setPage(1)
   }
 
@@ -496,7 +498,8 @@ export default function Dashboard() {
   const [lendOpen, setLendOpen] = useState(false)
   const [dropDept, setDropDept] = useState<string | null>(null)
   const [createReqForDept, setCreateReqForDept] = useState<{ deptId: number; deptName: string } | null>(null)
-  const dragStateRef = useRef<{ devices: AvailableDeviceRow[]; requestId: number | null } | null>(null)
+  const [activeCodeByDept, setActiveCodeByDept] = useState<Record<string, string>>({})
+  const dragStateRef = useRef<{ devices: AvailableDeviceRow[] } | null>(null)
   const [lendModal, setLendModal] = useState<{
     devices: AvailableDeviceRow[]
     dept: string
@@ -634,14 +637,14 @@ export default function Dashboard() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
             {data.deptCards.map(card => {
-              const validDrop = () => {
-                const reqId = dragStateRef.current?.requestId ?? null
-                return card.kind === 'loose' ? reqId == null : reqId != null
-              }
+              const activeCode = activeCodeByDept[card.dept] ?? card.requests[0]?.code ?? ''
+              const validDrop = () => card.kind === 'loose' ? true : card.requests.length > 0
               return (
                 <DeptCardPanel
                   key={card.dept}
                   card={card}
+                  activeCode={activeCode}
+                  onActiveCodeChange={code => setActiveCodeByDept(prev => ({ ...prev, [card.dept]: code }))}
                   isDrop={dropDept === card.dept}
                   canCreateRequest={hasPermission('create_request')}
                   onCreateRequest={() => {
@@ -654,9 +657,10 @@ export default function Dashboard() {
                     const drag = dragStateRef.current
                     dragStateRef.current = null
                     if (!drag) return
-                    const reqId = drag.requestId ?? null
-                    const ok = card.kind === 'loose' ? reqId == null : reqId != null
-                    if (!ok) return
+                    if (!validDrop()) return
+                    const activeReq = card.requests.find(r => r.code === activeCode) ?? card.requests[0]
+                    const reqId = card.kind === 'loose' ? null : (activeReq?.id ?? null)
+                    if (card.kind !== 'loose' && reqId == null) return
                     setLendModal({
                       devices: drag.devices,
                       dept: card.dept,

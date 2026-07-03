@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
+import { IconBox } from "@/lib/icons";
 import type { AvailableDeviceRow } from "@shared/ipc";
 
 export interface AllocationDrawerProps {
@@ -8,7 +9,6 @@ export interface AllocationDrawerProps {
   onClose(): void;
   dragStateRef: React.MutableRefObject<{
     devices: AvailableDeviceRow[];
-    requestId: number | null;
   } | null>;
 }
 
@@ -17,14 +17,6 @@ function useAvailableForDrawer() {
     queryKey: ["requests", "available-devices"],
     queryFn: () => unwrap(api.requests.availableDevices()),
     select: (d) => d.devices,
-  });
-}
-
-function useAllocatedRequests() {
-  return useQuery({
-    queryKey: ["requests", ""],
-    queryFn: () => unwrap(api.requests.list({ query: "" })),
-    select: (d) => d.requests.filter((r) => r.status !== "completed"),
   });
 }
 
@@ -67,17 +59,50 @@ function IconDrag({ size = 16 }: { size?: number }) {
   );
 }
 
+function DeviceThumbnail({ thumbnailPath }: { thumbnailPath: string | null }) {
+  if (thumbnailPath) {
+    return (
+      <img
+        src={`file://${thumbnailPath}`}
+        alt=""
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: "var(--rad-sm)",
+          objectFit: "cover",
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        flexShrink: 0,
+        borderRadius: "var(--rad-sm)",
+        background: "var(--surface-2)",
+        color: "var(--text-muted)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <IconBox size={20} />
+    </div>
+  );
+}
+
 export function AllocationDrawer({
   open,
   onClose,
   dragStateRef,
 }: AllocationDrawerProps) {
   const { data: devices = [] } = useAvailableForDrawer();
-  const { data: requests = [] } = useAllocatedRequests();
 
   const [lendQuery, setLendQuery] = useState("");
   const [lendSelected, setLendSelected] = useState<string[]>([]);
-  const [lendReqId, setLendReqId] = useState<number | null>(null);
 
   const filtered = devices.filter((d) => {
     const q = lendQuery.trim().toLowerCase();
@@ -109,7 +134,7 @@ export function AllocationDrawer({
         ? lendSelected
         : [sku];
     const picked = devices.filter((d) => skus.includes(d.sku));
-    dragStateRef.current = { devices: picked, requestId: lendReqId };
+    dragStateRef.current = { devices: picked };
   }
 
   if (!open) return null;
@@ -188,52 +213,6 @@ export function AllocationDrawer({
           </button>
         </div>
 
-        {/* Request select */}
-        <div
-          style={{
-            padding: "12px 16px",
-            borderBottom: "1px solid var(--border)",
-            flexShrink: 0,
-          }}
-        >
-          <label
-            style={{
-              display: "block",
-              fontSize: 12,
-              fontWeight: 600,
-              marginBottom: 6,
-              color: "var(--text-muted)",
-            }}
-          >
-            PHIẾU ĐỀ NGHỊ
-          </label>
-          <select
-            value={lendReqId ?? ""}
-            onChange={(e) =>
-              setLendReqId(e.target.value ? Number(e.target.value) : null)
-            }
-            style={{
-              width: "100%",
-              height: 36,
-              padding: "0 10px",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--rad-sm)",
-              background: "var(--surface-2)",
-              color: "var(--text)",
-              fontSize: 13,
-              outline: "none",
-              appearance: "auto" as React.CSSProperties["appearance"],
-            }}
-          >
-            <option value="">— Không liên kết phiếu —</option>
-            {requests.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.code} — {r.department}
-              </option>
-            ))}
-          </select>
-        </div>
-
         {/* Search */}
         <div
           style={{
@@ -255,7 +234,7 @@ export function AllocationDrawer({
               background: "var(--surface-2)",
               color: "var(--text)",
               fontSize: 13,
-              outline: "1px solid #32f1q1",
+              outline: "none",
               boxSizing: "border-box",
             }}
             onFocus={(e) => (e.target.style.borderColor = "var(--primary)")}
@@ -326,6 +305,12 @@ export function AllocationDrawer({
                     : "1px solid transparent",
                   userSelect: "none",
                 }}
+                onMouseEnter={(e) => {
+                  if (!selected) e.currentTarget.style.background = "var(--hoverbg)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!selected) e.currentTarget.style.background = "none";
+                }}
               >
                 <input
                   type="checkbox"
@@ -339,6 +324,7 @@ export function AllocationDrawer({
                     flexShrink: 0,
                   }}
                 />
+                <DeviceThumbnail thumbnailPath={d.thumbnailPath} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
