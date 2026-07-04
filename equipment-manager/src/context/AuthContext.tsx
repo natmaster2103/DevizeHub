@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import { api, unwrap } from '@/lib/api'
 import type { SessionUser, Role, LoginArgs, Permission } from '@shared/ipc'
 
@@ -27,12 +27,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Admin role always has full access, regardless of explicit permission rows.
   const hasPermission = (key: Permission) => role === 'admin' || permissions.includes(key)
 
-  async function login(args: LoginArgs) {
+  const login = useCallback(async (args: LoginArgs) => {
     setAutoLogoutMessage(null)
     const res = await unwrap(api.auth.login(args))
     setUser(res.user); setRoleOverride(null)
-  }
-  async function logout() {
+  }, [])
+  const logout = useCallback(async () => {
     try {
       const res = await api.auth.logout()
       if (!res.ok) console.error('Logout IPC failed:', res.error)
@@ -40,8 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setRoleOverride(null)
     }
-  }
-  function toggleRole() { setRoleOverride((r) => (role === 'admin' ? 'staff' : 'admin')) }
+  }, [])
+  const toggleRole = useCallback(() => setRoleOverride((r) => (role === 'admin' ? 'staff' : 'admin')), [role])
 
   return (
     <Ctx.Provider value={{ user, role, isAdmin: role === 'admin', permissions, groupIds, hasPermission, login, logout, toggleRole, autoLogoutMessage, setAutoLogoutMessage }}>
