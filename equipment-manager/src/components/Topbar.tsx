@@ -1,6 +1,7 @@
 import { useAuth } from '@/context/AuthContext'
 import { useUi } from '@/context/UiContext'
 import { IconSun, IconMoon, IconLogout } from '@/lib/icons'
+import { Timer } from './Timer'
 
 interface TopbarProps {
   title: string
@@ -34,6 +35,12 @@ export function Topbar({ title, subtitle }: TopbarProps) {
 
       {/* Right: controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+        {/* Live clock */}
+        <Timer />
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 2px' }} />
 
         {/* Theme toggle */}
         <button
