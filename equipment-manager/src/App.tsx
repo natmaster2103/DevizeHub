@@ -5,10 +5,12 @@ import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { UiProvider, useUi } from '@/context/UiContext'
 import { router } from '@/router'
 import Login from '@/pages/Login'
+import { useAutoLogoutWatcher } from '@/hooks/useAutoLogoutWatcher'
 
 function Shell() {
   const { user } = useAuth()
   const { dark } = useUi()
+  useAutoLogoutWatcher()
   return (
     <div className={`app-theme${dark ? ' dark' : ''}`}>
       {user ? <RouterProvider router={router} /> : <Login />}
