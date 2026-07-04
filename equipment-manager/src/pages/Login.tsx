@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login, autoLogoutMessage } = useAuth()
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('admin')
   const [error, setError] = useState('')
@@ -52,6 +52,16 @@ export default function Login() {
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Hệ thống cấp phát nội bộ</div>
           </div>
         </div>
+
+        {autoLogoutMessage && (
+          <div style={{
+            fontSize: 13, color: 'var(--text-muted)', background: 'var(--surface-2)',
+            border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+            padding: '10px 12px', marginBottom: 18, textAlign: 'center'
+          }}>
+            {autoLogoutMessage}
+          </div>
+        )}
 
         {/* Username */}
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Tên đăng nhập</label>

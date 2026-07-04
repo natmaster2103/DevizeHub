@@ -12,12 +12,15 @@ interface AuthCtx {
   login(args: LoginArgs): Promise<void>
   logout(): Promise<void>
   toggleRole(): void
+  autoLogoutMessage: string | null
+  setAutoLogoutMessage(msg: string | null): void
 }
 const Ctx = createContext<AuthCtx | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [roleOverride, setRoleOverride] = useState<Role | null>(null)
+  const [autoLogoutMessage, setAutoLogoutMessage] = useState<string | null>(null)
   const role: Role = roleOverride ?? user?.role ?? 'staff'
   const permissions = user?.permissions ?? []
   const groupIds = user?.groupIds ?? []
@@ -25,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasPermission = (key: Permission) => role === 'admin' || permissions.includes(key)
 
   async function login(args: LoginArgs) {
+    setAutoLogoutMessage(null)
     const res = await unwrap(api.auth.login(args))
     setUser(res.user); setRoleOverride(null)
   }
@@ -40,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function toggleRole() { setRoleOverride((r) => (role === 'admin' ? 'staff' : 'admin')) }
 
   return (
-    <Ctx.Provider value={{ user, role, isAdmin: role === 'admin', permissions, groupIds, hasPermission, login, logout, toggleRole }}>
+    <Ctx.Provider value={{ user, role, isAdmin: role === 'admin', permissions, groupIds, hasPermission, login, logout, toggleRole, autoLogoutMessage, setAutoLogoutMessage }}>
       {children}
     </Ctx.Provider>
   )
