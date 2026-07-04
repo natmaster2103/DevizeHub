@@ -10,7 +10,7 @@ describe('runMigrations', () => {
       .prepare("SELECT name FROM sqlite_master WHERE type='table'")
       .all() as { name: string }[]
     const names = rows.map((r) => r.name)
-    for (const t of ['categories','departments','employees','app_users','devices','requests','allocations','maintenance_logs']) {
+    for (const t of ['categories','departments','employees','app_users','devices','requests','allocations','maintenance_logs','app_config']) {
       expect(names).toContain(t)
     }
   })

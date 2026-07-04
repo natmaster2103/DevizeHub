@@ -57,6 +57,13 @@
       "when": 1782747306295,
       "tag": "0008_damp_gamma_corps",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1783169536414,
+      "tag": "0009_talented_rattler",
+      "breakpoints": true
     }
   ]
 }

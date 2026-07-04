@@ -123,11 +123,18 @@ export const maintenanceLogs = sqliteTable('maintenance_logs', {
   performedBy: text('performed_by')
 })
 
+export const appConfig = sqliteTable('app_config', {
+  id: integer('id').primaryKey(),
+  autoLogoutEnabled: integer('auto_logout_enabled').notNull().default(0),
+  autoLogoutTime: text('auto_logout_time').notNull().default('07:30'),
+})
+
 export const schema = {
   categories, deviceGroups, departments, employees, appUsers,
   userPermissions, userGroups,
   devices, requests, allocations, maintenanceLogs,
   groupFieldTemplates, groupFieldValues,
+  appConfig,
 }
 
 export type Category = typeof categories.$inferSelect
@@ -139,6 +146,7 @@ export type Device = typeof devices.$inferSelect
 export type RequestRow = typeof requests.$inferSelect
 export type Allocation = typeof allocations.$inferSelect
 export type MaintenanceLog = typeof maintenanceLogs.$inferSelect
+export type AppConfig = typeof appConfig.$inferSelect
 export type DeviceStatus = Device['status']
 export type UserPermission = typeof userPermissions.$inferSelect
 export type UserGroup = typeof userGroups.$inferSelect
