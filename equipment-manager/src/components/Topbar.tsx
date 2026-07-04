@@ -8,11 +8,10 @@ interface TopbarProps {
 }
 
 export function Topbar({ title, subtitle }: TopbarProps) {
-  const { user, role, isAdmin, toggleRole, logout } = useAuth()
+  const { user, isAdmin, logout } = useAuth()
   const { dark, toggleTheme } = useUi()
 
   const roleLabel = isAdmin ? 'Quản trị viên' : 'Nhân viên'
-  const roleDot = isAdmin ? '#16a34a' : '#ca8a04'
 
   const initials = user?.displayName
     ? user.displayName.split(' ').map(w => w[0]).slice(-2).join('').toUpperCase()
@@ -35,22 +34,6 @@ export function Topbar({ title, subtitle }: TopbarProps) {
 
       {/* Right: controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Role toggle */}
-        <button
-          onClick={toggleRole}
-          title="Chuyển vai trò (demo)"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 11px',
-            border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
-            cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
-            whiteSpace: 'nowrap', background: 'none'
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-        >
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: roleDot, flexShrink: 0 }} />
-          {roleLabel}
-        </button>
 
         {/* Theme toggle */}
         <button
@@ -66,22 +49,6 @@ export function Topbar({ title, subtitle }: TopbarProps) {
         >
           {dark ? <IconSun size={17} /> : <IconMoon size={17} />}
         </button>
-
-        {/* Bell with red dot */}
-        <div style={{
-          width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
-          cursor: 'pointer', color: 'var(--text-muted)', position: 'relative'
-        }}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-          </svg>
-          <span style={{
-            position: 'absolute', top: 6, right: 6, width: 7, height: 7,
-            borderRadius: '50%', background: '#dc2626', border: '1.5px solid var(--surface)'
-          }} />
-        </div>
 
         {/* Divider */}
         <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 2px' }} />
