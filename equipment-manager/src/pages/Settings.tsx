@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -489,6 +489,81 @@ function DbInfoSection() {
   )
 }
 
+// ── Auto-logout section (admin only) ──────────────────────────────────────────
+function useAutoLogoutConfig() {
+  return useQuery({ queryKey: ['settings', 'autoLogout'], queryFn: () => unwrap(api.settings.getAutoLogoutConfig()) })
+}
+
+function AutoLogoutSection() {
+  const { data } = useAutoLogoutConfig()
+  const qc = useQueryClient()
+  const [enabled, setEnabled] = useState(false)
+  const [time, setTime] = useState('07:30')
+  const [err, setErr] = useState('')
+  const [ok, setOk] = useState(false)
+
+  useEffect(() => {
+    if (data) {
+      setEnabled(data.enabled)
+      setTime(data.time)
+    }
+  }, [data])
+
+  const mut = useMutation({
+    mutationFn: () => unwrap(api.settings.saveAutoLogoutConfig({ enabled, time })),
+    onSuccess: () => {
+      setOk(true)
+      setErr('')
+      qc.invalidateQueries({ queryKey: ['settings', 'autoLogout'] })
+    },
+    onError: (e) => { setErr((e as Error).message); setOk(false) },
+  })
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+        Toàn bộ tài khoản đang đăng nhập sẽ tự động đăng xuất vào giờ này mỗi ngày.
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={e => { setEnabled(e.target.checked); setOk(false) }}
+        />
+        Bật tự động đăng xuất theo giờ
+      </label>
+      <div>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 5 }}>Giờ đăng xuất</label>
+        <input
+          type="time"
+          value={time}
+          disabled={!enabled}
+          onChange={e => { setTime(e.target.value); setOk(false) }}
+          style={{ ...inputStyle, maxWidth: 160, opacity: enabled ? 1 : 0.5 }}
+          onFocus={focusOn}
+          onBlur={focusOff}
+        />
+      </div>
+      {err && <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>{err}</div>}
+      {ok && <div style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>Đã lưu cấu hình!</div>}
+      <div>
+        <button
+          onClick={() => mut.mutate()}
+          disabled={mut.isPending}
+          style={{
+            height: 38, padding: '0 18px', border: 'none',
+            borderRadius: 'var(--rad-sm)', background: 'var(--primary)',
+            color: '#fff', fontSize: 13, fontWeight: 600,
+            cursor: mut.isPending ? 'not-allowed' : 'pointer', opacity: mut.isPending ? 0.7 : 1
+          }}
+        >
+          {mut.isPending ? 'Đang lưu…' : 'Lưu'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Reset data section (admin only) ───────────────────────────────────────────
 function ResetDataSection() {
   const qc = useQueryClient()
@@ -613,6 +688,12 @@ export default function Settings() {
       {isAdmin && (
         <SectionCard title="Quản lý tài khoản">
           <UsersSection />
+        </SectionCard>
+      )}
+
+      {isAdmin && (
+        <SectionCard title="Tự động đăng xuất">
+          <AutoLogoutSection />
         </SectionCard>
       )}
 
