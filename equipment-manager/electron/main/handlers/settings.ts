@@ -13,6 +13,7 @@ import {
   departments,
   userPermissions,
   userGroups,
+  appConfig,
 } from '../db/schema'
 import { seedIfEmpty } from '../db/seed'
 import { session } from '../session'
@@ -27,9 +28,11 @@ import type {
   Role,
   Permission,
   DeleteEntityArgs,
+  AutoLogoutConfig,
 } from '@shared/ipc'
 
 function now() { return new Date().toISOString() }
+const AUTO_LOGOUT_TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/
 
 export function requirePermission(perm: Permission): ApiResponse<never> | null {
   // Admin role always has full access, regardless of explicit permission rows.
@@ -216,6 +219,33 @@ export function makeSettingsHandlers(db: AppDb, dbPath: string) {
         lastBackup = stat.mtime.toISOString()
       } catch { /* file not found in dev */ }
       return { ok: true, data: { path: dbPath, sizeKb, lastBackup } }
+    },
+
+    async getAutoLogoutConfig(): Promise<ApiResponse<AutoLogoutConfig>> {
+      const row = db.select().from(appConfig).where(eq(appConfig.id, 1)).all()[0]
+      return {
+        ok: true,
+        data: row
+          ? { enabled: row.autoLogoutEnabled === 1, time: row.autoLogoutTime }
+          : { enabled: false, time: '07:30' },
+      }
+    },
+
+    async saveAutoLogoutConfig(args: AutoLogoutConfig): Promise<ApiResponse<{ ok: true }>> {
+      if (session.current?.role !== 'admin') {
+        return { ok: false, error: { code: 'FORBIDDEN', message: 'Chỉ quản trị viên mới có thể thay đổi cấu hình này.' } }
+      }
+      if (!AUTO_LOGOUT_TIME_RE.test(args?.time ?? '')) {
+        return { ok: false, error: { code: 'BAD_REQUEST', message: 'Giờ không hợp lệ (định dạng HH:mm).' } }
+      }
+      db.insert(appConfig)
+        .values({ id: 1, autoLogoutEnabled: args.enabled ? 1 : 0, autoLogoutTime: args.time })
+        .onConflictDoUpdate({
+          target: appConfig.id,
+          set: { autoLogoutEnabled: args.enabled ? 1 : 0, autoLogoutTime: args.time },
+        })
+        .run()
+      return { ok: true, data: { ok: true } }
     },
   }
 }

@@ -183,3 +183,54 @@ describe('settings.resetData — permission check', () => {
     expect(res.ok).toBe(true)
   })
 })
+
+describe('settings.getAutoLogoutConfig / saveAutoLogoutConfig', () => {
+  beforeEach(() => {
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+  })
+
+  it('returns a disabled default when no config has been saved', async () => {
+    const db = freshDb()
+    const h = makeSettingsHandlers(db, ':memory:')
+    const res = await h.getAutoLogoutConfig()
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data).toEqual({ enabled: false, time: '07:30' })
+  })
+
+  it('saves and reads back the config', async () => {
+    const db = freshDb()
+    const h = makeSettingsHandlers(db, ':memory:')
+    const save = await h.saveAutoLogoutConfig({ enabled: true, time: '07:30' })
+    expect(save.ok).toBe(true)
+    const res = await h.getAutoLogoutConfig()
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data).toEqual({ enabled: true, time: '07:30' })
+  })
+
+  it('overwrites the previous value on a second save (upsert)', async () => {
+    const db = freshDb()
+    const h = makeSettingsHandlers(db, ':memory:')
+    await h.saveAutoLogoutConfig({ enabled: true, time: '07:30' })
+    await h.saveAutoLogoutConfig({ enabled: false, time: '22:00' })
+    const res = await h.getAutoLogoutConfig()
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data).toEqual({ enabled: false, time: '22:00' })
+  })
+
+  it('rejects a malformed time', async () => {
+    const db = freshDb()
+    const h = makeSettingsHandlers(db, ':memory:')
+    const res = await h.saveAutoLogoutConfig({ enabled: true, time: '7:30' })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('BAD_REQUEST')
+  })
+
+  it('rejects a non-admin caller even with every permission granted', async () => {
+    const db = freshDb()
+    session.current = { id: 2, username: 'staff', role: 'staff', displayName: 'Staff', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const h = makeSettingsHandlers(db, ':memory:')
+    const res = await h.saveAutoLogoutConfig({ enabled: true, time: '07:30' })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('FORBIDDEN')
+  })
+})

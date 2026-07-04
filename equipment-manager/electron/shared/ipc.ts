@@ -48,6 +48,8 @@ export const CHANNELS = {
   settingsSaveUserPermissions: 'settings.saveUserPermissions',
   settingsSaveUserGroups: 'settings.saveUserGroups',
   settingsDeleteUser: 'settings.deleteUser',
+  settingsGetAutoLogout: 'settings.getAutoLogout',
+  settingsSaveAutoLogout: 'settings.saveAutoLogout',
 } as const
 
 export type Role = 'admin' | 'staff'
@@ -295,6 +297,8 @@ export interface SaveUserArgs { id?: number; username: string; displayName: stri
 export interface ChangePasswordArgs { currentPassword: string; newPassword: string }
 export interface DbInfoResult { path: string; sizeKb: number; lastBackup: string | null }
 
+export interface AutoLogoutConfig { enabled: boolean; time: string } // time: "HH:mm", 24h, device-local
+
 export type RequestStatus = 'pending' | 'allocated' | 'completed'
 
 export interface RequestRow {
@@ -425,5 +429,7 @@ export interface Api {
     saveUserPermissions(args: SaveUserPermissionsArgs): Promise<ApiResponse<{ ok: true }>>
     saveUserGroups(args: SaveUserGroupsArgs): Promise<ApiResponse<{ ok: true }>>
     deleteUser(args: DeleteEntityArgs): Promise<ApiResponse<{ ok: true }>>
+    getAutoLogoutConfig(): Promise<ApiResponse<AutoLogoutConfig>>
+    saveAutoLogoutConfig(args: AutoLogoutConfig): Promise<ApiResponse<{ ok: true }>>
   }
 }

@@ -76,4 +76,6 @@ export function registerHandlers(ipcMain: IpcMain, db: AppDb, dbPath: string): v
   ipcMain.handle(CHANNELS.settingsSaveUserPermissions, (_e, args) => auth_guard(() => settingsH.saveUserPermissions(args)))
   ipcMain.handle(CHANNELS.settingsSaveUserGroups, (_e, args) => auth_guard(() => settingsH.saveUserGroups(args)))
   ipcMain.handle(CHANNELS.settingsDeleteUser, (_e, args) => auth_guard(() => settingsH.deleteUser(args)))
+  ipcMain.handle(CHANNELS.settingsGetAutoLogout, () => auth_guard(() => settingsH.getAutoLogoutConfig()))
+  ipcMain.handle(CHANNELS.settingsSaveAutoLogout, (_e, args) => auth_guard(() => settingsH.saveAutoLogoutConfig(args)))
 }

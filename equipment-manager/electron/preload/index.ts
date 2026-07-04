@@ -68,6 +68,8 @@ const api: Api = {
     saveUserPermissions: (args) => ipcRenderer.invoke(CHANNELS.settingsSaveUserPermissions, args),
     saveUserGroups: (args) => ipcRenderer.invoke(CHANNELS.settingsSaveUserGroups, args),
     deleteUser: (args) => ipcRenderer.invoke(CHANNELS.settingsDeleteUser, args),
+    getAutoLogoutConfig: () => ipcRenderer.invoke(CHANNELS.settingsGetAutoLogout),
+    saveAutoLogoutConfig: (args) => ipcRenderer.invoke(CHANNELS.settingsSaveAutoLogout, args),
   },
 }
 
