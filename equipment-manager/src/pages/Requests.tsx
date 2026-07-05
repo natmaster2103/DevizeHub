@@ -61,7 +61,7 @@ export default function Requests() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Tìm phiếu, phòng ban…"
+            placeholder="Tìm phiếu, đơn vị…"
             style={{
               width: '100%', height: 40, padding: '0 14px 0 36px',
               border: '1px solid var(--border)', borderRadius: 'var(--rad-md)',
@@ -82,7 +82,7 @@ export default function Requests() {
             fontSize: 14, outline: 'none', appearance: 'auto' as any,
           }}
         >
-          <option value="">Tất cả phòng ban</option>
+          <option value="">Tất cả</option>
           {(departments ?? []).map(d => (
             <option key={d.id} value={d.name}>{d.name}</option>
           ))}
@@ -153,7 +153,7 @@ export default function Requests() {
             textTransform: 'uppercase', letterSpacing: '.03em'
           }}>
             <div>Mã phiếu</div>
-            <div>Phòng ban</div>
+            <div>Đội yêu cầu</div>
             <div>Ngày lập</div>
             <div style={{ textAlign: 'center' }}>SL</div>
             <div>Trạng thái</div>

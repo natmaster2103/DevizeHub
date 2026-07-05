@@ -8,9 +8,9 @@ import {
 
 const NAV = [
   { to: '/', label: 'Tổng quan', icon: IconDashboard },
-  { to: '/devices', label: 'Thiết bị', icon: IconDevices },
   { to: '/requests', label: 'Phiếu đề nghị', icon: IconRequests },
-  { to: '/allocate', label: 'Cấp phát lẻ', icon: IconAllocate },
+  { to: '/devices', label: 'Thiết bị', icon: IconDevices },
+  // { to: '/allocate', label: 'Cấp phát lẻ', icon: IconAllocate },
   { to: '/reports', label: 'Báo cáo', icon: IconReports },
   { to: '/catalog', label: 'Danh mục', icon: IconCatalog },
   { to: '/settings', label: 'Cài đặt', icon: IconSettings }

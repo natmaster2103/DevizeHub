@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
-import { requests, allocations, devices, departments } from '../db/schema'
+import { requests, allocations, devices, departments, deviceGroups } from '../db/schema'
 import { session } from '../session'
 import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeDashboardHandlers } from './dashboard'
@@ -220,6 +220,29 @@ describe('dashboard.summary', () => {
     expect(looseCards.length).toBe(1)
     expect(looseCards[0].count).toBe(0)
     expect(looseCards[0].looseItems).toEqual([])
+  })
+
+  it('exposes the device group thumbnail path on dept card items', async () => {
+    const { db, dash } = setup()
+    const res = await dash.summary()
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+
+    const allItems = res.data.deptCards.flatMap(c =>
+      [...c.requests.flatMap(r => r.items), ...(c.looseItems ?? [])]
+    )
+    expect(allItems.length).toBeGreaterThan(0)
+    // Every item must carry the field (even if null for ungrouped devices).
+    expect(allItems.every(i => 'thumbnailPath' in i)).toBe(true)
+
+    const dev = db.select({ id: devices.id, groupId: devices.groupId })
+      .from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    if (dev?.groupId != null) {
+      const group = db.select({ thumbnailPath: deviceGroups.thumbnailPath })
+        .from(deviceGroups).where(eq(deviceGroups.id, dev.groupId)).get()
+      const item = allItems.find(i => i.deviceSku === 'LAP-0024')
+      if (item) expect(item.thumbnailPath).toBe(group?.thumbnailPath ?? null)
+    }
   })
 
   it('shows borrowerName from the column for a loose allocation', async () => {

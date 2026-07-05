@@ -1,5 +1,6 @@
 import { eq, isNull, and } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
+import { readFileSync, writeFileSync } from 'fs'
 import * as XLSX from 'xlsx'
 import type { AppDb } from '../db'
 import { requirePermission } from './settings'
@@ -500,7 +501,12 @@ export function makeDeviceHandlers(db: AppDb) {
         filters: [{ name: 'Excel', extensions: ['xlsx'] }],
       })
       if (result.canceled || !result.filePath) return { ok: true, data: { saved: false } }
-      XLSX.writeFile(wb, result.filePath)
+      // XLSX.writeFile()'s runtime auto-detection of a save strategy (Node fs vs.
+      // Deno vs. browser Blob) gets tree-shaken out of the bundled main process,
+      // leaving no working path and always throwing "cannot save file". Write
+      // the buffer ourselves instead.
+      const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+      writeFileSync(result.filePath, buf)
       return { ok: true, data: { saved: true } }
     },
 
@@ -510,7 +516,11 @@ export function makeDeviceHandlers(db: AppDb) {
 
       let workbook: XLSX.WorkBook
       try {
-        workbook = XLSX.readFile(args.filePath)
+        // XLSX.readFile()'s runtime auto-detection of a read strategy (Node fs vs.
+        // Deno vs. browser File) gets tree-shaken out of the bundled main process,
+        // leaving no working path. Read the buffer ourselves instead.
+        const buf = readFileSync(args.filePath)
+        workbook = XLSX.read(buf, { type: 'buffer' })
       } catch {
         return { ok: false, error: { code: 'BAD_REQUEST', message: 'Không thể đọc file. Vui lòng kiểm tra định dạng file (.xlsx, .xls, .csv).' } }
       }
@@ -522,7 +532,7 @@ export function makeDeviceHandlers(db: AppDb) {
       const allCats = db.select({ id: categories.id, name: categories.name }).from(categories).all()
       const allGroups = db.select({ id: deviceGroups.id, name: deviceGroups.name, categoryId: deviceGroups.categoryId }).from(deviceGroups).all()
       const catByName = new Map(allCats.map(c => [c.name.trim().toLowerCase(), c]))
-      const grpByName = new Map(allGroups.map(g => [g.name.trim().toLowerCase(), g]))
+      const grpByKey = new Map(allGroups.map(g => [`${g.categoryId} ${g.name.trim().toLowerCase()}`, g]))
 
       const skusInFile = new Map<string, number>() // lowercase sku → first rowNum
 
@@ -563,15 +573,18 @@ export function makeDeviceHandlers(db: AppDb) {
         }
 
         if (!error && groupName) {
-          const grp = grpByName.get(groupName.toLowerCase())
-          if (!grp) {
-            error = `Nhóm không tồn tại: "${groupName}"`
-          } else if (categoryId == null) {
+          const nameKey = groupName.toLowerCase()
+          if (categoryId == null) {
             error = `Phải nhập Loại khi có Nhóm: "${groupName}"`
-          } else if (grp.categoryId !== categoryId) {
-            error = `Nhóm không thuộc loại đã chọn: "${groupName}"`
           } else {
-            groupId = grp.id
+            const grp = grpByKey.get(`${categoryId} ${nameKey}`)
+            if (grp) {
+              groupId = grp.id
+            } else if (allGroups.some(g => g.name.trim().toLowerCase() === nameKey)) {
+              error = `Nhóm không thuộc loại đã chọn: "${groupName}"`
+            } else {
+              error = `Nhóm không tồn tại: "${groupName}"`
+            }
           }
         }
 
@@ -588,22 +601,26 @@ export function makeDeviceHandlers(db: AppDb) {
 
       const now = new Date().toISOString()
       let imported = 0
-      db.transaction((tx) => {
-        for (const row of args.rows) {
-          tx.insert(devices).values({
-            sku: row.sku.trim(),
-            name: row.name.trim(),
-            categoryId: row.categoryId,
-            serialNumber: row.serialNumber?.trim() || null,
-            notes: row.notes?.trim() || null,
-            groupId: row.groupId,
-            status: 'available',
-            createdAt: now,
-            updatedAt: now,
-          }).run()
-          imported++
-        }
-      })
+      try {
+        db.transaction((tx) => {
+          for (const row of args.rows) {
+            tx.insert(devices).values({
+              sku: row.sku.trim(),
+              name: row.name.trim(),
+              categoryId: row.categoryId,
+              serialNumber: row.serialNumber?.trim() || null,
+              notes: row.notes?.trim() || null,
+              groupId: row.groupId,
+              status: 'available',
+              createdAt: now,
+              updatedAt: now,
+            }).run()
+            imported++
+          }
+        })
+      } catch {
+        return { ok: false, error: { code: 'CONFLICT', message: 'Nhập thất bại: có SKU đã tồn tại hoặc dữ liệu không hợp lệ. Không có thiết bị nào được nhập.' } }
+      }
       return { ok: true, data: { imported } }
     },
   }

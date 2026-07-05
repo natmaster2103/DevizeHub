@@ -107,7 +107,7 @@ export default function Devices() {
           {(() => {
             const grp = row.original.groupId ? groupById.get(row.original.groupId) : null
             return grp?.thumbnailPath ? (
-              <img src={`file://${grp.thumbnailPath}`} alt="" style={{ width: 64, height: 64, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+              <img src={`file://${grp.thumbnailPath}`} alt="" style={{ width: 64, height: 64, padding: 4, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
             ) : null
           })()}
 
@@ -359,7 +359,7 @@ export default function Devices() {
               key={hg.id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '84px  0.5fr 1.6fr 100px 1fr   1fr 130px',
+                gridTemplateColumns: '84px  0.5fr 1fr 1fr 0.5fr 1fr 130px',
                 padding: '0 18px', height: 44, alignItems: 'center',
                 background: 'var(--surface-2)', borderBottom: '1px solid var(--border)',
                 fontSize: 12, fontWeight: 700, color: 'var(--text-muted)',
@@ -380,7 +380,7 @@ export default function Devices() {
               key={row.id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '84px 0.5fr 1.6fr 100px 1fr 1fr 130px',
+                gridTemplateColumns: '84px  0.5fr 1fr 1fr 0.5fr 1fr 130px',
                 padding: '0 18px', minHeight: 52, alignItems: 'center',
                 borderBottom: '1px solid var(--border)', fontSize: 14
               }}

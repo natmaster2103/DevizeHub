@@ -191,6 +191,7 @@ export interface DeptCardItem {
   allocationId: number
   deviceSku: string
   name: string
+  thumbnailPath: string | null
   datetime: string
   borrowerName: string
   lender: string

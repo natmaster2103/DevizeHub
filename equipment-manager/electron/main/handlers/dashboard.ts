@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import type { AppDb } from '../db'
 import {
   devices,
+  deviceGroups,
   allocations,
   employees,
   departments,
@@ -66,10 +67,20 @@ export function makeDashboardHandlers(db: AppDb) {
       const allUsers = db.select({ id: appUsers.id, displayName: appUsers.displayName }).from(appUsers).all()
       const userById = new Map(allUsers.map((u) => [u.id, u.displayName]))
 
-      // Fetch device names for items
-      const allDevicesInfo = db.select({ id: devices.id, name: devices.name, sku: devices.sku }).from(devices).all()
+      // Fetch device names + group thumbnail for items
+      const allDevicesInfo = db
+        .select({
+          id: devices.id,
+          name: devices.name,
+          sku: devices.sku,
+          thumbnailPath: deviceGroups.thumbnailPath,
+        })
+        .from(devices)
+        .leftJoin(deviceGroups, eq(devices.groupId, deviceGroups.id))
+        .all()
       const deviceById = new Map(allDevicesInfo.map((d) => [d.id, d.name]))
       const deviceSkuById = new Map(allDevicesInfo.map((d) => [d.id, d.sku]))
+      const deviceThumbById = new Map(allDevicesInfo.map((d) => [d.id, d.thumbnailPath]))
 
       // Fetch lender per allocation (issuedBy on allocation)
       const allocWithLender = db
@@ -129,6 +140,7 @@ export function makeDashboardHandlers(db: AppDb) {
               allocationId: a.allocId,
               deviceSku: deviceSkuById.get(a.deviceId) ?? '',
               name: deviceById.get(a.deviceId) ?? '',
+              thumbnailPath: deviceThumbById.get(a.deviceId) ?? null,
               datetime: fmtDateTime(a.issuedAt),
               borrowerName: a.borrowerName ?? a.employeeName ?? parseBorrowerFromNotes(a.allocNotes),
               lender: lenderName,
@@ -160,6 +172,7 @@ export function makeDashboardHandlers(db: AppDb) {
             allocationId: a.allocId,
             deviceSku: deviceSkuById.get(a.deviceId) ?? '',
             name: deviceById.get(a.deviceId) ?? '',
+            thumbnailPath: deviceThumbById.get(a.deviceId) ?? null,
             datetime: fmtDateTime(a.issuedAt),
             borrowerName: a.borrowerName ?? a.employeeName ?? parseBorrowerFromNotes(a.allocNotes),
             lender: lenderName,

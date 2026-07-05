@@ -127,7 +127,7 @@ export function seedIfEmpty(db: AppDb): void {
         username: 'admin',
         passwordHash,
         role: 'admin',
-        displayName: 'Trần Quốc Bảo',
+        displayName: 'Nguyễn Anh Tuấn',
         active: 1,
         createdAt: NOW,
       })

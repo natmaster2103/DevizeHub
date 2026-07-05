@@ -5,6 +5,7 @@ import type { DeptCard, DeptCardItem, DeptCardRequest, DashboardSummary, Availab
 import {
   IconBox, IconCheck, IconWrench, IconAlert, IconReturn, IconBuilding, IconPlus
 } from '@/lib/icons'
+import { DeviceThumbnail } from '@/components/DeviceThumbnail'
 import { AllocationDrawer } from '@/components/AllocationDrawer'
 import { ReturnDialog } from '@/components/ReturnDialog'
 import { CreateRequestDialog } from '@/components/CreateRequestDialog'
@@ -243,7 +244,7 @@ function DeptCardPanel({
         border: `1px solid ${isDrop ? 'var(--primary)' : 'var(--border)'}`,
         borderRadius: 'var(--rad-lg)', padding: 18,
         display: 'flex', flexDirection: 'column', gap: 14,
-        height: 430, overflow: 'hidden',
+        height: 630, overflow: 'hidden',
         boxShadow: isDrop ? '0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent)' : 'none',
         transition: 'border-color .12s, box-shadow .12s'
       }}
@@ -273,9 +274,9 @@ function DeptCardPanel({
           <button
             onClick={onCreateRequest}
             disabled={card.deptId == null}
-            title="Tạo phiếu"
+            title={"Tạo phiếu"}
             style={{
-              width: 26, height: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 'auto', fontSize: 13, padding: '8px 11px', fontWeight: 600, gap: 4, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
               background: 'none', color: card.deptId == null ? 'var(--text-muted)' : 'var(--text)',
               cursor: card.deptId == null ? 'not-allowed' : 'pointer',
@@ -291,7 +292,8 @@ function DeptCardPanel({
               e.currentTarget.style.color = 'var(--text)'
             }}
           >
-            <IconPlus size={14} />
+            <IconPlus size={16} />
+            <span> Thêm phiếu</span>
           </button>
         )}
       </div>
@@ -391,6 +393,7 @@ function DeptCardPanel({
                 borderRadius: 'var(--rad-sm)', background: 'var(--surface-2)',
                 border: '1px solid var(--border)'
               }}>
+                <DeviceThumbnail thumbnailPath={item.thumbnailPath} size={36} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span style={{
@@ -401,8 +404,10 @@ function DeptCardPanel({
                       fontSize: 11, color: 'var(--text-muted)',
                       whiteSpace: 'nowrap', flexShrink: 0,
                       fontFamily: "'Consolas', monospace"
-                    }}>{item.datetime}</span>
+                    }}>{item.datetime}
+                    </span>
                   </div>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12 }}>
                     <span style={{ color: 'var(--text-muted)' }}>
                       Mượn: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{item.borrowerName}</span>
@@ -432,7 +437,7 @@ function DeptCardPanel({
                     }}
                   >
                     <IconReturn size={14} />
-                    <span>Trả về</span>
+                    <span> Trả</span>
                   </button>
                 )}
               </div>
@@ -559,83 +564,17 @@ export default function Dashboard() {
       paddingRight: lendOpen ? 444 : 0,
       transition: 'padding .2s ease'
     }}>
-      {/* Stat cards */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
-        gap: 16, marginBottom: 18
-      }}>
-        {STAT_DEFS.map(({ label, key, Icon, color, tint, getDelta }) => {
-          const value = key === 'broken'
-            ? (data.stats.broken ?? 0) + (data.stats.decommissioned ?? 0)
-            : data.stats[key]
-          const deltaInfo = getDelta?.(data.stats) ?? null
-          return (
-            <div key={key} style={{
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: 'var(--rad-lg)', padding: '18px 18px 16px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>{label}</div>
-                  <div style={{
-                    fontSize: 30, fontWeight: 700, letterSpacing: '-.02em',
-                    marginTop: 6, lineHeight: 1
-                  }}>{value}</div>
-                </div>
-                <div style={{
-                  width: 42, height: 42, borderRadius: 'var(--rad-md)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: tint, color
-                }}>
-                  <Icon size={20} />
-                </div>
-              </div>
-              {deltaInfo && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  marginTop: 12, fontSize: 12, color: 'var(--text-muted)'
-                }}>
-                  <span style={{ color, fontWeight: 600 }}>{deltaInfo.delta}</span>
-                  {deltaInfo.deltaLabel}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
 
       {/* Dept section */}
       {data.deptCards.length > 0 && (
         <>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            margin: '20px 0 14px'
-          }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>
-                Thiết bị đang trang bị theo phòng ban
-              </div>
-
+          <div style={{ margin: '20px 0 14px' }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>
+              Thiết bị đang trang bị
             </div>
-            <button
-              onClick={() => setLendOpen(true)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                height: 34, padding: '0 12px', border: 'none',
-                borderRadius: 'var(--rad-sm)', background: 'var(--primary)',
-                color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer'
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--primary)')}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Cấp phát
-            </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
             {data.deptCards.map(card => {
               const activeCode = activeCodeByDept[card.dept] ?? card.requests[0]?.code ?? ''
               const validDrop = () => card.kind === 'loose' ? true : card.requests.length > 0
@@ -680,6 +619,27 @@ export default function Dashboard() {
             })}
           </div>
         </>
+      )}
+
+      {data.deptCards.length > 0 && !lendOpen && (
+        <button
+          onClick={() => setLendOpen(true)}
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 90,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            height: 42, padding: '0 18px', border: 'none',
+            borderRadius: 999, background: 'var(--primary)',
+            color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            boxShadow: '0 8px 20px rgba(0,0,0,.25)'
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--primary)')}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Cấp phát
+        </button>
       )}
 
       <AllocationDrawer

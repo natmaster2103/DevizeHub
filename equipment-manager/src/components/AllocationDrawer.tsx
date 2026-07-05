@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
-import { IconBox } from "@/lib/icons";
+import { DeviceThumbnail } from "@/components/DeviceThumbnail";
 import type { AvailableDeviceRow } from "@shared/ipc";
 
 export interface AllocationDrawerProps {
@@ -56,41 +56,6 @@ function IconDrag({ size = 16 }: { size?: number }) {
       <circle cx="15" cy="12" r="1" />
       <circle cx="15" cy="18" r="1" />
     </svg>
-  );
-}
-
-function DeviceThumbnail({ thumbnailPath }: { thumbnailPath: string | null }) {
-  if (thumbnailPath) {
-    return (
-      <img
-        src={`file://${thumbnailPath}`}
-        alt=""
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: "var(--rad-sm)",
-          objectFit: "cover",
-          flexShrink: 0,
-        }}
-      />
-    );
-  }
-  return (
-    <div
-      style={{
-        width: 48,
-        height: 48,
-        flexShrink: 0,
-        borderRadius: "var(--rad-sm)",
-        background: "var(--surface-2)",
-        color: "var(--text-muted)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <IconBox size={20} />
-    </div>
   );
 }
 
@@ -344,7 +309,14 @@ export function AllocationDrawer({
                       marginTop: 2,
                     }}
                   >
-                    <span style={{ fontFamily: "'Consolas',monospace" }}>
+                    <span style={{
+                      flexShrink: 0, padding: '2px 8px', borderRadius: 999,
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: "'Consolas', monospace",
+                      color: 'var(--primary)',
+                      border: '1px solid var(--primary)',
+                      whiteSpace: 'nowrap'
+                    }}>
                       {d.sku}
                     </span>
                     {d.category ? ` · ${d.category}` : ""}

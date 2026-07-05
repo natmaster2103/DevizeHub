@@ -2,30 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; }
-html, body, #root { margin: 0; padding: 0; height: 100%; }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
 body {
   font-family: "Segoe UI", -apple-system, system-ui, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: rgba(120,130,150,.35); border-radius: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 130, 150, .35);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 
 .app-theme {
-  --bg:#f6f8fb; --surface:#ffffff; --surface-2:#f1f5f9; --border:#e6eaf0;
-  --text:#0f172a; --text-muted:#64748b; --primary:#2563eb; --primary-hover:#1d4ed8;
-  --hoverbg:rgba(15,23,42,.045); --barmuted:#cbd5e1; --sidebar:#ffffff;
-  --primary-soft:color-mix(in srgb, var(--primary) 12%, transparent);
-  --primary-soft2:color-mix(in srgb, var(--primary) 6%, transparent);
-  --primary-tint:color-mix(in srgb, var(--primary) 15%, transparent);
-  --rh:54px; --tfs:13.5px; --rad-lg:12px; --rad-md:9px; --rad-sm:7px;
-  background: var(--bg); color: var(--text);
-  min-height: 100vh; width: 100%;
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #e6eaf0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --primary: #0d9488;
+  --primary-hover: #0f766e;
+  --hoverbg: rgba(15, 23, 42, .045);
+  --barmuted: #cbd5e1;
+  --sidebar: #ffffff;
+  --primary-soft: color-mix(in srgb, var(--primary) 12%, transparent);
+  --primary-soft2: color-mix(in srgb, var(--primary) 6%, transparent);
+  --primary-tint: color-mix(in srgb, var(--primary) 15%, transparent);
+  --rh: 54px;
+  --tfs: 13.5px;
+  --rad-lg: 12px;
+  --rad-md: 9px;
+  --rad-sm: 7px;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  width: 100%;
 }
+
 .app-theme.dark {
-  --bg:#0b1220; --surface:#111827; --surface-2:#1a2333; --border:#26303f;
-  --text:#e8edf5; --text-muted:#8b98ad; --primary:#3b82f6; --primary-hover:#2563eb;
-  --hoverbg:rgba(148,163,184,.1); --barmuted:#334155; --sidebar:#0e1626;
+  --bg: #0b1220;
+  --surface: #111827;
+  --surface-2: #1a2333;
+  --border: #26303f;
+  --text: #e8edf5;
+  --text-muted: #8b98ad;
+  --primary: #14b8a6;
+  --primary-hover: #0d9488;
+  --hoverbg: rgba(148, 163, 184, .1);
+  --barmuted: #334155;
+  --sidebar: #0e1626;
 }
-.mono { font-family: "Consolas", "SF Mono", monospace; }
+
+.mono {
+  font-family: "Consolas", "SF Mono", monospace;
+}

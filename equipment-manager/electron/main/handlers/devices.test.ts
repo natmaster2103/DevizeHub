@@ -616,6 +616,32 @@ describe('devices.previewImport', () => {
       expect(res.data.rows[0].error).toMatch(/Loại/)
     } finally { fs.unlinkSync(p) }
   })
+
+  it('resolves same-named groups in different categories to the right group', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const catalogH = makeCatalogHandlers(db)
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catA = cats.data.categories[0]
+    const catB = cats.data.categories[1]
+    if (!catB) return // need 2 seed categories
+    await catalogH.saveGroup({ name: 'DupGroup', categoryId: catA.id })
+    await catalogH.saveGroup({ name: 'DupGroup', categoryId: catB.id })
+    const after = await catalogH.list()
+    if (!after.ok) throw new Error('list failed')
+    const grpInA = after.data.groups.find(g => g.name === 'DupGroup' && g.categoryId === catA.id)!
+    const h = makeDeviceHandlers(db)
+    const p = makeTempXlsx([HEADERS, ['DG-001', 'Device', catA.name, 'DupGroup', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(true)
+      expect(res.data.rows[0].groupId).toBe(grpInA.id)
+    } finally { fs.unlinkSync(p) }
+  })
 })
 
 describe('devices.importBatch', () => {
@@ -652,5 +678,23 @@ describe('devices.importBatch', () => {
     const res = await h.importBatch({ rows: [{ sku: 'X', name: 'X', categoryId: null, groupId: null, serialNumber: null, notes: null }] })
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.error.code).toBe('FORBIDDEN')
+  })
+
+  it('rolls back the whole batch and returns ApiResponse error when a row conflicts', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const h = makeDeviceHandlers(db)
+    const res = await h.importBatch({
+      rows: [
+        { sku: 'RB-001', name: 'Device 1', categoryId: null, groupId: null, serialNumber: null, notes: null },
+        { sku: 'LAP-0012', name: 'Conflict', categoryId: null, groupId: null, serialNumber: null, notes: null }, // exists in seed
+      ]
+    })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('CONFLICT')
+    // rollback: RB-001 must NOT have been inserted
+    const leaked = db.select({ sku: devices.sku }).from(devices).where(eq(devices.sku, 'RB-001')).all()
+    expect(leaked.length).toBe(0)
   })
 })
