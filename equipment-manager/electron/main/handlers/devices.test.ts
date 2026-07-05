@@ -1,0 +1,700 @@
+import { describe, it, expect } from 'vitest'
+import { eq } from 'drizzle-orm'
+import * as XLSX from 'xlsx'
+import * as os from 'node:os'
+import * as nodePath from 'node:path'
+import * as fs from 'node:fs'
+import { createDb } from '../db'
+import { runMigrations } from '../db/migrate'
+import { seedIfEmpty } from '../db/seed'
+import { devices, allocations, categories } from '../db/schema'
+import { session } from '../session'
+import { ALL_PERMISSIONS } from '@shared/ipc'
+import { makeDeviceHandlers } from './devices'
+import { makeAllocateHandlers } from './allocate'
+import { makeCatalogHandlers } from './catalog'
+
+function setup() {
+  const { db } = createDb(':memory:')
+  runMigrations(db); seedIfEmpty(db)
+  session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+  return makeDeviceHandlers(db)
+}
+
+describe('devices.list', () => {
+  it('returns all 12 devices with total and counts when filter=all', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: '' })
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.data.total).toBe(12)
+      expect(res.data.devices.length).toBe(12)
+      const all = res.data.counts.find((c) => c.key === 'all')
+      expect(all?.count).toBe(12)
+    }
+  })
+
+  it('filters by status', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'available', query: '' })
+    if (res.ok) expect(res.data.devices.every((d) => d.status === 'available')).toBe(true)
+  })
+
+  it('searches by sku/name (case-insensitive)', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: 'lap-0012' })
+    if (res.ok) {
+      expect(res.data.devices.length).toBe(1)
+      expect(res.data.devices[0].sku).toBe('LAP-0012')
+    }
+  })
+})
+
+describe('devices.get', () => {
+  it('returns device detail with info fields and history for LAP-0012', async () => {
+    const h = setup()
+    const res = await h.get({ sku: 'LAP-0012' })
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.data.device.sku).toBe('LAP-0012')
+      expect(res.data.info.length).toBeGreaterThanOrEqual(6)
+      expect(Array.isArray(res.data.history)).toBe(true)
+    }
+  })
+
+  it('returns an error for an unknown sku', async () => {
+    const h = setup()
+    const res = await h.get({ sku: 'NOPE-9999' })
+    expect(res.ok).toBe(false)
+  })
+})
+
+describe('devices.create', () => {
+  it('inserts a new device and returns its sku', async () => {
+    const h = setup()
+    const res = await h.create({
+      sku: 'NEW-001',
+      name: 'Thiết bị mới',
+      categoryId: null,
+      serialNumber: null,
+      notes: null,
+      groupId: null,
+    })
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data.sku).toBe('NEW-001')
+  })
+
+  it('returns CONFLICT when SKU already exists', async () => {
+    const h = setup()
+    await h.create({ sku: 'DUP-001', name: 'A', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    const res = await h.create({ sku: 'DUP-001', name: 'B', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('CONFLICT')
+  })
+})
+
+describe('devices.update', () => {
+  it('updates name and notes of an existing device', async () => {
+    const h = setup()
+    await h.create({ sku: 'UPD-001', name: 'Old Name', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    const res = await h.update({ sku: 'UPD-001', name: 'New Name', categoryId: null, serialNumber: 'SN-99', notes: 'updated', groupId: null })
+    expect(res.ok).toBe(true)
+    const detail = await h.get({ sku: 'UPD-001' })
+    if (detail.ok) {
+      expect(detail.data.device.name).toBe('New Name')
+      expect(detail.data.device.serialNumber).toBe('SN-99')
+    }
+  })
+
+  it('returns NOT_FOUND for unknown sku', async () => {
+    const h = setup()
+    const res = await h.update({ sku: 'NOPE', name: 'X', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('NOT_FOUND')
+  })
+})
+
+describe('devices.changeStatus', () => {
+  it('changes status from available to maintenance', async () => {
+    const h = setup()
+    await h.create({ sku: 'CS-001', name: 'Device', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    const res = await h.changeStatus({ sku: 'CS-001', status: 'maintenance', notes: null })
+    expect(res.ok).toBe(true)
+    const detail = await h.get({ sku: 'CS-001' })
+    if (detail.ok) expect(detail.data.device.status).toBe('maintenance')
+  })
+
+  it('returns BAD_REQUEST when target status is allocated', async () => {
+    const h = setup()
+    await h.create({ sku: 'CS-002', name: 'Device', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    // @ts-expect-error intentional invalid status
+    const res = await h.changeStatus({ sku: 'CS-002', status: 'allocated', notes: null })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('BAD_REQUEST')
+  })
+
+  it('returns CONFLICT when device has active allocation', async () => {
+    const h = setup()
+    // LAP-0001 is seeded as allocated
+    const list = await h.list({ filter: 'allocated', query: '' })
+    expect(list.ok).toBe(true)
+    if (!list.ok) return
+    expect(list.data.devices.length).toBeGreaterThan(0)
+    const allocatedSku = list.data.devices[0].sku
+    const res = await h.changeStatus({ sku: allocatedSku, status: 'maintenance', notes: null })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('CONFLICT')
+  })
+})
+
+describe('devices.list — activeAllocationId', () => {
+  it('exposes activeAllocationId for an allocated device and null for one without an active allocation', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: '' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const allocated = res.data.devices.find((d) => d.sku === 'LAP-0012')  // active in DX-301
+    const free = res.data.devices.find((d) => d.sku === 'LAP-0024')       // never allocated
+    expect(allocated).toBeDefined()
+    expect(free).toBeDefined()
+    expect(typeof allocated!.activeAllocationId).toBe('number')
+    expect(free!.activeAllocationId).toBeNull()
+  })
+})
+
+describe('devices.get — activeAllocationId', () => {
+  it('exposes the active allocationId for an allocated device', async () => {
+    const h = setup()
+    // LAP-0012 is seeded as allocated under the active request DX-301
+    const res = await h.get({ sku: 'LAP-0012' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.data.device.status).toBe('allocated')
+    expect(typeof res.data.device.activeAllocationId).toBe('number')
+  })
+
+  it('returns null activeAllocationId for a device with no active allocation', async () => {
+    const h = setup()
+    // LAP-0024 (MacBook Air M2) is seeded available and never allocated
+    const res = await h.get({ sku: 'LAP-0024' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.data.device.activeAllocationId).toBeNull()
+  })
+})
+
+describe('devices.list — pagination', () => {
+  it('returns first page of 5 when pageSize=5', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: '', page: 1, pageSize: 5 })
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.data.devices.length).toBe(5)
+      expect(res.data.total).toBe(12)
+    }
+  })
+
+  it('returns correct second page', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: '', page: 2, pageSize: 5 })
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data.devices.length).toBe(5)
+  })
+
+  it('counts array still reflects all devices regardless of page', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: '', page: 1, pageSize: 2 })
+    if (res.ok) {
+      const all = res.data.counts.find(c => c.key === 'all')
+      expect(all?.count).toBe(12)
+    }
+  })
+})
+
+describe('devices.list — groupId filter', () => {
+  it('returns empty list when filtering by a groupId with no devices', async () => {
+    const h = setup()
+    // Use a groupId that definitely has no devices (9999 — doesn't exist).
+    // Handler should return empty result, not error.
+    const res = await h.list({ filter: 'all', query: '', groupId: 9999 })
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data.devices.length).toBe(0)
+  })
+
+  it('composes groupId filter with status filter', async () => {
+    const h = setup()
+    // groupId null returns all devices (same as no groupId)
+    const all = await h.list({ filter: 'all', query: '', groupId: null })
+    const noArg = await h.list({ filter: 'all', query: '' })
+    expect(all.ok && noArg.ok).toBe(true)
+    if (all.ok && noArg.ok) {
+      expect(all.data.total).toBe(noArg.data.total)
+    }
+  })
+})
+
+describe('devices.delete', () => {
+  it('deletes a device that has never been allocated', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+
+    // PRJ-0003 (Epson) is 'Trong kho' and never allocated in seed
+    const res = await h.delete({ sku: 'PRJ-0003' })
+    expect(res.ok).toBe(true)
+
+    const gone = db.select().from(devices).where(eq(devices.sku, 'PRJ-0003')).all()
+    expect(gone.length).toBe(0)
+  })
+
+  it('blocks deletion when the device is currently allocated', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+    const alloc = makeAllocateHandlers(db)
+
+    // LAP-0024 available → allocate it loosely so it has an active allocation
+    await alloc.quickAllocate({
+      deviceSkus: ['LAP-0024'], departmentId: null,
+      borrowerName: 'X', requestId: null, notes: null,
+    })
+
+    const res = await h.delete({ sku: 'LAP-0024' })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('CONFLICT')
+
+    // Still present
+    const still = db.select().from(devices).where(eq(devices.sku, 'LAP-0024')).all()
+    expect(still.length).toBe(1)
+  })
+
+  it('cascade-deletes returned allocation history with the device', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+
+    // NET-0002 (TP-Link Switch) belongs to DX-298 ('Hoàn tất' → allocation has returnedAt set),
+    // so it has history but NO active allocation → deletion is allowed and cascades the history.
+    const dev = db.select({ id: devices.id })
+      .from(devices).where(eq(devices.sku, 'NET-0002')).get()
+    expect(dev).toBeDefined()
+
+    const res = await h.delete({ sku: 'NET-0002' })
+    expect(res.ok).toBe(true)
+
+    const allocsLeft = db.select().from(allocations)
+      .where(eq(allocations.deviceId, dev!.id)).all()
+    expect(allocsLeft.length).toBe(0)
+  })
+})
+
+describe('devices.list — group and categoryId filter', () => {
+  it('returns group: null for devices without a group (seed data)', async () => {
+    const h = setup()
+    const res = await h.list({ filter: 'all', query: '' })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices.every((d) => d.group === null)).toBe(true)
+    expect(res.data.devices.every((d) => d.groupId === null)).toBe(true)
+  })
+
+  it('filters by categoryId', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+    // Get first device's categoryId
+    const all = await h.list({ filter: 'all', query: '' })
+    if (!all.ok) throw new Error('list failed')
+    const catId = all.data.devices.find((d) => d.categoryId != null)?.categoryId ?? null
+    if (catId == null) return // skip if no categorised devices in seed
+
+    const res = await h.list({ filter: 'all', query: '', categoryId: catId })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices.every((d) => d.categoryId === catId)).toBe(true)
+  })
+
+  it('counts are scoped to categoryId filter', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+
+    const all = await h.list({ filter: 'all', query: '' })
+    if (!all.ok) throw new Error('list failed')
+    const catId = all.data.devices.find((d) => d.categoryId != null)?.categoryId ?? null
+    if (catId == null) return // skip if no categorised devices in seed
+
+    const res = await h.list({ filter: 'all', query: '', categoryId: catId })
+    if (!res.ok) throw new Error('list failed')
+
+    const allCount = res.data.counts.find((c) => c.key === 'all')!
+    // 'all' count must match total (both scoped to the category)
+    expect(allCount.count).toBe(res.data.total)
+
+    // Sum of per-status counts must equal the 'all' count
+    const nonAllSum = res.data.counts
+      .filter((c) => c.key !== 'all')
+      .reduce((sum, c) => sum + c.count, 0)
+    expect(nonAllSum).toBe(allCount.count)
+
+    // Every returned device belongs to the filtered category
+    expect(res.data.devices.every((d) => d.categoryId === catId)).toBe(true)
+  })
+})
+
+describe('devices.create / update — groupId', () => {
+  it('create accepts groupId and stores it', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const catalogH = makeCatalogHandlers(db)
+    const h = makeDeviceHandlers(db)
+
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catId = cats.data.categories[0].id
+    await catalogH.saveGroup({ name: 'TestGroup', categoryId: catId })
+    const after = await catalogH.list()
+    if (!after.ok) throw new Error('list failed')
+    const groupId = after.data.groups.find((g) => g.name === 'TestGroup')!.id
+
+    await h.create({ sku: 'GRP-0001', name: 'Grouped Device', categoryId: catId, serialNumber: null, notes: null, groupId })
+    const res = await h.list({ filter: 'all', query: 'GRP-0001' })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices[0].groupId).toBe(groupId)
+    expect(res.data.devices[0].group).toBe('TestGroup')
+  })
+
+  it('create clears groupId when group belongs to a different category', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const catalogH = makeCatalogHandlers(db)
+    const h = makeDeviceHandlers(db)
+
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catA = cats.data.categories[0].id
+    const catB = cats.data.categories[1]?.id
+    if (catB == null) return // need 2 categories
+
+    // Create a group in catA
+    await catalogH.saveGroup({ name: 'GroupInA', categoryId: catA })
+    const after = await catalogH.list()
+    if (!after.ok) throw new Error('list failed')
+    const groupId = after.data.groups.find((g) => g.name === 'GroupInA')!.id
+
+    // Create a device in catB with the group from catA — should be cleared
+    await h.create({ sku: 'CROSS-001', name: 'CrossCat Device', categoryId: catB, serialNumber: null, notes: null, groupId })
+    const res = await h.list({ filter: 'all', query: 'CROSS-001' })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices[0].groupId).toBeNull()
+  })
+
+  it('update auto-clears groupId when category changes', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const catalogH = makeCatalogHandlers(db)
+    const h = makeDeviceHandlers(db)
+
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catA = cats.data.categories[0].id
+    const catB = cats.data.categories[1]?.id
+    if (catB == null) return // need 2 categories
+
+    await catalogH.saveGroup({ name: 'GroupA', categoryId: catA })
+    const after = await catalogH.list()
+    if (!after.ok) throw new Error('list failed')
+    const groupId = after.data.groups.find((g) => g.name === 'GroupA')!.id
+
+    // Create device in catA with groupId
+    await h.create({ sku: 'AUTOGRP-001', name: 'Test', categoryId: catA, serialNumber: null, notes: null, groupId })
+
+    // Update to catB — groupId should be cleared
+    await h.update({ sku: 'AUTOGRP-001', name: 'Test', categoryId: catB, serialNumber: null, notes: null, groupId })
+    const res = await h.list({ filter: 'all', query: 'AUTOGRP-001' })
+    if (!res.ok) throw new Error('list failed')
+    expect(res.data.devices[0].groupId).toBeNull()
+  })
+})
+
+describe('devices.get — borrower_name column in history', () => {
+  it('uses borrower_name column for the allocate entry flow.to', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    db.insert(allocations).values({
+      deviceId: dev!.id,
+      issuedAt: new Date().toISOString(),
+      borrowerName: 'Người Mượn Cột',
+      notes: null,
+    }).run()
+    const res = await h.get({ sku: 'LAP-0024' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const allocateEntry = res.data.history.find(e => e.type === 'allocate')
+    expect(allocateEntry!.flow!.to).toBe('Người Mượn Cột')
+  })
+
+  it('falls back to legacy notes when borrower_name is null', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    const h = makeDeviceHandlers(db)
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.sku, 'LAP-0024')).get()
+    db.insert(allocations).values({
+      deviceId: dev!.id,
+      issuedAt: new Date().toISOString(),
+      borrowerName: null,
+      notes: 'Người mượn: Legacy Cũ',
+    }).run()
+    const res = await h.get({ sku: 'LAP-0024' })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const allocateEntry = res.data.history.find(e => e.type === 'allocate')
+    expect(allocateEntry!.flow!.to).toBe('Legacy Cũ')
+  })
+})
+
+describe('devices — permission enforcement', () => {
+  it('rejects devices.create for session without edit_device', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db)
+    seedIfEmpty(db)
+    session.current = {
+      id: 2, username: 'staff', role: 'staff', displayName: 'Staff',
+      permissions: ['view_reports'], groupIds: [],
+    }
+    const h = makeDeviceHandlers(db)
+    const res = await h.create({ sku: 'X-001', name: 'Test', categoryId: null, serialNumber: null, notes: null, groupId: null })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('FORBIDDEN')
+  })
+})
+
+function makeTempXlsx(rows: (string | number | null)[][]): string {
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Sheet1')
+  const p = nodePath.join(os.tmpdir(), `test-import-${Date.now()}.xlsx`)
+  XLSX.writeFile(wb, p)
+  return p
+}
+
+const HEADERS = ['SKU', 'Tên thiết bị', 'Loại', 'Nhóm', 'Số serial', 'Ghi chú']
+
+describe('devices.previewImport', () => {
+  it('returns valid row for a correct new device', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS, ['IMP-001', 'Laptop Test', '', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows.length).toBe(1)
+      expect(res.data.rows[0].valid).toBe(true)
+      expect(res.data.rows[0].error).toBeNull()
+      expect(res.data.rows[0].sku).toBe('IMP-001')
+      expect(res.data.rows[0].rowNum).toBe(2)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks row with empty SKU as invalid', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS, ['', 'Laptop Test', '', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/SKU/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks row with empty name as invalid', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS, ['IMP-002', '', '', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/Tên/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks duplicate SKU within file as invalid', async () => {
+    const h = setup()
+    const p = makeTempXlsx([
+      HEADERS,
+      ['DUP-001', 'Device A', '', '', '', ''],
+      ['DUP-001', 'Device B', '', '', '', ''],
+    ])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(true)
+      expect(res.data.rows[1].valid).toBe(false)
+      expect(res.data.rows[1].error).toMatch(/trùng lặp/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks SKU that already exists in DB as invalid', async () => {
+    const h = setup()
+    // LAP-0012 exists in seed data
+    const p = makeTempXlsx([HEADERS, ['LAP-0012', 'Some Name', '', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/tồn tại/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('resolves a known category name to categoryId', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    // Get a real category name from seed
+    const cats = db.select({ name: categories.name, id: categories.id }).from(categories).all()
+    if (cats.length === 0) return
+    const cat = cats[0]
+    const h = makeDeviceHandlers(db)
+    const p = makeTempXlsx([HEADERS, ['CAT-001', 'Device', cat.name, '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(true)
+      expect(res.data.rows[0].categoryId).toBe(cat.id)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('marks non-existent category name as invalid', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS, ['CAT-002', 'Device', 'LoạiKhôngTồnTại', '', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/Loại thiết bị không tồn tại/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('returns ok with empty rows for header-only file', async () => {
+    const h = setup()
+    const p = makeTempXlsx([HEADERS])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows.length).toBe(0)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('returns error for a non-existent file path', async () => {
+    const h = setup()
+    const res = await h.previewImport({ filePath: '/no/such/file.xlsx' })
+    expect(res.ok).toBe(false)
+  })
+
+  it('marks group-without-category as invalid', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const catalogH = makeCatalogHandlers(db)
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catId = cats.data.categories[0].id
+    await catalogH.saveGroup({ name: 'GrpNoCategory', categoryId: catId })
+    const h = makeDeviceHandlers(db)
+    const p = makeTempXlsx([HEADERS, ['GNC-001', 'Device', '', 'GrpNoCategory', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(false)
+      expect(res.data.rows[0].error).toMatch(/Loại/)
+    } finally { fs.unlinkSync(p) }
+  })
+
+  it('resolves same-named groups in different categories to the right group', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const catalogH = makeCatalogHandlers(db)
+    const cats = await catalogH.list()
+    if (!cats.ok) throw new Error('list failed')
+    const catA = cats.data.categories[0]
+    const catB = cats.data.categories[1]
+    if (!catB) return // need 2 seed categories
+    await catalogH.saveGroup({ name: 'DupGroup', categoryId: catA.id })
+    await catalogH.saveGroup({ name: 'DupGroup', categoryId: catB.id })
+    const after = await catalogH.list()
+    if (!after.ok) throw new Error('list failed')
+    const grpInA = after.data.groups.find(g => g.name === 'DupGroup' && g.categoryId === catA.id)!
+    const h = makeDeviceHandlers(db)
+    const p = makeTempXlsx([HEADERS, ['DG-001', 'Device', catA.name, 'DupGroup', '', '']])
+    try {
+      const res = await h.previewImport({ filePath: p })
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.data.rows[0].valid).toBe(true)
+      expect(res.data.rows[0].groupId).toBe(grpInA.id)
+    } finally { fs.unlinkSync(p) }
+  })
+})
+
+describe('devices.importBatch', () => {
+  it('inserts all valid rows and returns count', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const h = makeDeviceHandlers(db)
+    const res = await h.importBatch({
+      rows: [
+        { sku: 'BATCH-001', name: 'Device 1', categoryId: null, groupId: null, serialNumber: null, notes: null },
+        { sku: 'BATCH-002', name: 'Device 2', categoryId: null, groupId: null, serialNumber: 'SN-X', notes: 'note' },
+      ]
+    })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.data.imported).toBe(2)
+    const rows = db.select({ sku: devices.sku }).from(devices).where(eq(devices.sku, 'BATCH-001')).all()
+    expect(rows.length).toBe(1)
+  })
+
+  it('returns imported=0 and succeeds for empty rows array', async () => {
+    const h = setup()
+    const res = await h.importBatch({ rows: [] })
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.data.imported).toBe(0)
+  })
+
+  it('rejects importBatch without edit_device permission', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 2, username: 'staff', role: 'staff', displayName: 'Staff', permissions: ['view_reports'], groupIds: [] }
+    const h = makeDeviceHandlers(db)
+    const res = await h.importBatch({ rows: [{ sku: 'X', name: 'X', categoryId: null, groupId: null, serialNumber: null, notes: null }] })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('FORBIDDEN')
+  })
+
+  it('rolls back the whole batch and returns ApiResponse error when a row conflicts', async () => {
+    const { db } = createDb(':memory:')
+    runMigrations(db); seedIfEmpty(db)
+    session.current = { id: 1, username: 'admin', role: 'admin', displayName: 'Admin', permissions: ALL_PERMISSIONS, groupIds: [] }
+    const h = makeDeviceHandlers(db)
+    const res = await h.importBatch({
+      rows: [
+        { sku: 'RB-001', name: 'Device 1', categoryId: null, groupId: null, serialNumber: null, notes: null },
+        { sku: 'LAP-0012', name: 'Conflict', categoryId: null, groupId: null, serialNumber: null, notes: null }, // exists in seed
+      ]
+    })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error.code).toBe('CONFLICT')
+    // rollback: RB-001 must NOT have been inserted
+    const leaked = db.select({ sku: devices.sku }).from(devices).where(eq(devices.sku, 'RB-001')).all()
+    expect(leaked.length).toBe(0)
+  })
+})

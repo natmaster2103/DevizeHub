@@ -1,0 +1,863 @@
+import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRequest, useAvailableDevices } from '@/hooks/useRequest'
+import { useAuth } from '@/context/AuthContext'
+import { requestEffectiveLabel, requestEffectiveBadgeStyle } from '@/lib/status'
+import { IconBack, IconReturn, IconPlus, IconSearch, IconPrint, IconEdit, IconTrash } from '@/lib/icons'
+import { printRequest } from '@/lib/print'
+import { api, unwrap } from '@/lib/api'
+import type { RequestDeviceLine, RequestDetail, ReturnDeviceArgs, AddToRequestArgs, UpdateRequestArgs, DeleteRequestArgs, UpdateRequestStatusArgs } from '@shared/ipc'
+import { ReturnDialog } from '@/components/ReturnDialog'
+
+// ── X button icon ────────────────────────────────────────────────────────────
+function IconX({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+// ── Date format helper ────────────────────────────────────────────────────────
+function displayDateToInputValue(ddmmyyyy: string): string {
+  const [dd, mm, yyyy] = ddmmyyyy.split('/')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+// ── Add Device Dialog ─────────────────────────────────────────────────────────
+interface AddDeviceDialogProps {
+  requestDetail: RequestDetail
+  onClose(): void
+  onConfirm(args: AddToRequestArgs): void
+  loading: boolean
+}
+
+function AddDeviceDialog({ requestDetail, onClose, onConfirm, loading }: AddDeviceDialogProps) {
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [borrowerName, setBorrowerName] = useState('')
+  const [localError, setLocalError] = useState('')
+  const { data } = useAvailableDevices(true)
+
+  function submit() {
+    setLocalError('')
+    if (!borrowerName.trim()) { setLocalError('Vui lòng nhập tên người mượn.'); return }
+    if (selected.size === 0) { setLocalError('Vui lòng chọn ít nhất một thiết bị.'); return }
+    onConfirm({ requestId: requestDetail.id, deviceSkus: [...selected], borrowerName: borrowerName.trim() })
+  }
+
+  const devices = (data?.devices ?? []).filter(d => {
+    const q = search.toLowerCase()
+    return (
+      d.sku.toLowerCase().includes(q) ||
+      d.name.toLowerCase().includes(q) ||
+      d.category.toLowerCase().includes(q)
+    )
+  })
+
+  function toggle(sku: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(sku) ? next.delete(sku) : next.add(sku)
+      return next
+    })
+  }
+
+  const availableCount = data?.devices.length ?? 0
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(15,23,42,.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: 560, maxHeight: '80vh', background: 'var(--surface)',
+          borderRadius: 'var(--rad-lg)', boxShadow: '0 24px 60px rgba(0,0,0,.3)',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden'
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Thêm thiết bị vào phiếu</div>
+            <button
+              onClick={onClose}
+              style={{
+                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+                borderRadius: 'var(--rad-sm)'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <IconX size={16} />
+            </button>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+            Phiếu <span style={{
+              fontFamily: "'Consolas',monospace", fontWeight: 700, color: 'var(--primary)'
+            }}>{requestDetail.code}</span> · {availableCount} thiết bị sẵn có trong kho
+          </div>
+        </div>
+
+        {/* Borrower name */}
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+            Tên người mượn <span style={{ color: '#dc2626' }}>*</span>
+          </label>
+          <input
+            value={borrowerName}
+            onChange={e => setBorrowerName(e.target.value)}
+            placeholder="Nhập tên người mượn"
+            style={{
+              width: '100%', height: 36, padding: '0 12px',
+              border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+              background: 'var(--surface-2)', color: 'var(--text)',
+              fontSize: 13, outline: 'none', boxSizing: 'border-box'
+            }}
+            onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+          />
+        </div>
+
+        {/* Search */}
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+              color: 'var(--text-muted)', display: 'flex'
+            }}>
+              <IconSearch size={15} />
+            </span>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Tìm thiết bị…"
+              style={{
+                width: '100%', height: 36, padding: '0 12px 0 32px',
+                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                background: 'var(--surface-2)', color: 'var(--text)',
+                fontSize: 13, outline: 'none', boxSizing: 'border-box'
+              }}
+              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            />
+          </div>
+        </div>
+
+        {/* Device list */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {devices.length === 0 && (
+            <div style={{ padding: '20px', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
+              Không có thiết bị phù hợp.
+            </div>
+          )}
+          {devices.map(dev => {
+            const isChecked = selected.has(dev.sku)
+            return (
+              <label
+                key={dev.sku}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '11px 20px', cursor: 'pointer',
+                  borderBottom: '1px solid var(--border)',
+                  background: isChecked ? 'var(--primary-soft2, rgba(37,99,235,.06))' : 'none'
+                }}
+                onMouseEnter={e => { if (!isChecked) (e.currentTarget.style.background = 'var(--hoverbg)') }}
+                onMouseLeave={e => { if (!isChecked) (e.currentTarget.style.background = 'none') }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggle(dev.sku)}
+                  style={{ accentColor: 'var(--primary)', width: 16, height: 16, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{dev.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    <span style={{ fontFamily: "'Consolas',monospace" }}>{dev.sku}</span>
+                    {dev.category ? ` · ${dev.category}` : ''}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+                  background: 'rgba(22,163,74,.14)', color: '#16a34a'
+                }}>Trong kho</span>
+              </label>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0
+        }}>
+          <span style={{ fontSize: 13, color: localError ? '#dc2626' : 'var(--text-muted)', fontWeight: localError ? 500 : 400 }}>
+            {localError || `Đã chọn: ${selected.size} thiết bị`}
+          </span>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={onClose}
+              style={{
+                height: 38, padding: '0 16px', border: '1px solid var(--border)',
+                borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              Hủy
+            </button>
+            <button
+              onClick={submit}
+              disabled={loading || selected.size === 0}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                height: 38, padding: '0 16px', border: 'none',
+                borderRadius: 'var(--rad-sm)', background: 'var(--primary)',
+                color: '#fff', fontSize: 13, fontWeight: 600,
+                cursor: (loading || selected.size === 0) ? 'not-allowed' : 'pointer',
+                opacity: (loading || selected.size === 0) ? 0.6 : 1
+              }}
+              onMouseEnter={e => { if (!loading && selected.size > 0) (e.currentTarget.style.background = 'var(--primary-hover)') }}
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--primary)')}
+            >
+              <IconPlus size={14} />
+              {loading ? 'Đang thêm…' : 'Thêm vào phiếu'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Edit Request Dialog ───────────────────────────────────────────────────────
+interface EditRequestDialogProps {
+  request: RequestDetail
+  onClose(): void
+}
+
+function EditRequestDialog({ request, onClose }: EditRequestDialogProps) {
+  const qc = useQueryClient()
+  const [code, setCode] = useState(request.code)
+  const [departmentId, setDepartmentId] = useState<number>(request.departmentId ?? 0)
+  const [createdAt, setCreatedAt] = useState(displayDateToInputValue(request.createdAt))
+  const [notes, setNotes] = useState(request.notes ?? '')
+  const [err, setErr] = useState('')
+
+  const { data: catalogData } = useQuery({
+    queryKey: ['catalog'],
+    queryFn: () => unwrap(api.catalog.list()),
+  })
+  const departmentList = catalogData?.departments ?? []
+
+  const mut = useMutation({
+    mutationFn: (args: UpdateRequestArgs) => unwrap(api.requests.update(args)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['request', request.id] })
+      qc.invalidateQueries({ queryKey: ['requests'] })
+      onClose()
+    },
+    onError: (e) => setErr((e as Error).message),
+  })
+
+  function save() {
+    setErr('')
+    if (!code.trim()) { setErr('Mã phiếu không được để trống.'); return }
+    if (!departmentId) { setErr('Vui lòng chọn phòng ban.'); return }
+    mut.mutate({
+      id: request.id,
+      code: code.trim(),
+      departmentId,
+      createdAt: createdAt || null,
+      notes: notes.trim() || null,
+    })
+  }
+
+  const inputStyle: React.CSSProperties = {
+    height: 36, padding: '0 10px', fontSize: 13,
+    border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+    background: 'var(--surface)', color: 'var(--text)',
+    outline: 'none', boxSizing: 'border-box', width: '100%',
+  }
+
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(15,23,42,.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: 480, background: 'var(--surface)', borderRadius: 'var(--rad-lg)',
+          boxShadow: '0 24px 60px rgba(0,0,0,.3)',
+          padding: 24, display: 'flex', flexDirection: 'column', gap: 16,
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Sửa phiếu đề nghị</div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 5 }}>
+              Mã phiếu <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+            <input
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              style={inputStyle}
+              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 5 }}>
+              Phòng ban <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+            <select
+              value={departmentId}
+              onChange={e => setDepartmentId(Number(e.target.value))}
+              style={{ ...inputStyle, appearance: 'auto' as any }}
+              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            >
+              <option value={0}>-- Chọn phòng ban --</option>
+              {departmentList.map(d => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 5 }}>Ngày lập</label>
+            <input
+              type="date"
+              value={createdAt}
+              onChange={e => setCreatedAt(e.target.value)}
+              style={inputStyle}
+              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 5 }}>Ghi chú</label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={3}
+              style={{
+                ...inputStyle, height: 'auto', padding: '8px 10px',
+                resize: 'vertical', fontFamily: 'inherit',
+              }}
+              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            />
+          </div>
+        </div>
+
+        {err && <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>{err}</div>}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={onClose}
+            style={{ height: 38, padding: '0 16px', border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Hủy
+          </button>
+          <button
+            onClick={save}
+            disabled={mut.isPending}
+            style={{ height: 38, padding: '0 18px', border: 'none', borderRadius: 'var(--rad-sm)', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: mut.isPending ? 'not-allowed' : 'pointer', opacity: mut.isPending ? 0.7 : 1 }}
+          >
+            {mut.isPending ? 'Đang lưu…' : 'Lưu'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Confirm Delete Request Dialog ─────────────────────────────────────────────
+interface ConfirmDeleteRequestDialogProps {
+  request: RequestDetail
+  onClose(): void
+}
+
+function ConfirmDeleteRequestDialog({ request, onClose }: ConfirmDeleteRequestDialogProps) {
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+  const [err, setErr] = useState('')
+  const unreturnedCount = request.lines.filter(l => !l.isReturned).length
+
+  const mut = useMutation({
+    mutationFn: (args: DeleteRequestArgs) => unwrap(api.requests.delete(args)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['requests'] })
+      navigate('/requests')
+    },
+    onError: (e) => setErr((e as Error).message),
+  })
+
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget && !mut.isPending) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(15,23,42,.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: 440, background: 'var(--surface)', borderRadius: 'var(--rad-lg)',
+          boxShadow: '0 24px 60px rgba(0,0,0,.3)',
+          padding: 24, display: 'flex', flexDirection: 'column', gap: 16,
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Xác nhận xoá phiếu</div>
+        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>
+          Bạn có chắc muốn xoá phiếu{' '}
+          <b style={{ fontFamily: "'Consolas',monospace" }}>{request.code}</b>?{' '}
+          {unreturnedCount > 0 && (
+            <>
+              Thao tác này sẽ xoá tất cả <b>{unreturnedCount} thiết bị đã cấp phát</b> trong phiếu.{' '}
+            </>
+          )}
+          <b>Không thể hoàn tác.</b>
+        </div>
+
+        {err && <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>{err}</div>}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={onClose}
+            disabled={mut.isPending}
+            style={{ height: 38, padding: '0 16px', border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'none', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: mut.isPending ? 'not-allowed' : 'pointer' }}
+          >
+            Hủy
+          </button>
+          <button
+            onClick={() => mut.mutate({ id: request.id })}
+            disabled={mut.isPending}
+            style={{ height: 38, padding: '0 18px', border: 'none', borderRadius: 'var(--rad-sm)', background: '#dc2626', color: '#fff', fontSize: 13, fontWeight: 600, cursor: mut.isPending ? 'not-allowed' : 'pointer', opacity: mut.isPending ? 0.7 : 1 }}
+          >
+            {mut.isPending ? 'Đang xoá…' : 'Xoá phiếu'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Device line row ───────────────────────────────────────────────────────────
+const LINE_COL = '120px 1.3fr 0.9fr 0.9fr 150px 110px'
+
+function DeviceTable({
+  lines,
+  onReturn,
+}: {
+  lines: RequestDeviceLine[]
+  onReturn(line: RequestDeviceLine): void
+}) {
+  return (
+    <div style={{
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: 'var(--rad-lg)', overflow: 'hidden', marginTop: 18
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: LINE_COL,
+        padding: '0 18px', height: 44, alignItems: 'center',
+        background: 'var(--surface-2)', borderBottom: '1px solid var(--border)',
+        fontSize: 12, fontWeight: 700, color: 'var(--text-muted)',
+        textTransform: 'uppercase', letterSpacing: '.03em'
+      }}>
+        <div>SKU</div>
+        <div>Tên thiết bị</div>
+        <div>Loại</div>
+        <div>Người mượn</div>
+        <div>Ngày cấp phát</div>
+        <div style={{ textAlign: 'right' }}>Trạng thái</div>
+      </div>
+
+      {lines.length === 0 && (
+        <div style={{ padding: '20px 18px', fontSize: 13, color: 'var(--text-muted)' }}>
+          Chưa có thiết bị nào trong phiếu này.
+        </div>
+      )}
+
+      {lines.map(line => (
+        <div
+          key={line.allocationId}
+          style={{
+            display: 'grid', gridTemplateColumns: LINE_COL,
+            padding: '0 18px', minHeight: 52, alignItems: 'center',
+            borderBottom: '1px solid var(--border)', fontSize: 14,
+            opacity: line.isReturned ? 0.55 : 1
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
+          onMouseLeave={e => (e.currentTarget.style.background = '')}
+        >
+          <div style={{
+            fontFamily: "'Consolas','SF Mono',monospace",
+            fontSize: 12, fontWeight: 600, color: 'var(--text-muted)'
+          }}>{line.deviceSku}</div>
+          <div style={{ fontWeight: 600 }}>{line.deviceName}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{line.category}</div>
+          <div style={{ color: 'var(--text-muted)' }}>{line.recipient || '—'}</div>
+          <div style={{
+            fontFamily: "'Consolas','SF Mono',monospace",
+            fontSize: 12, color: 'var(--text-muted)'
+          }}>{line.issuedAt}</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            {!line.isReturned && (
+              <button
+                onClick={() => onReturn(line)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  height: 30, padding: '0 11px',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'var(--surface)', color: 'var(--text)',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+              >
+                <IconReturn size={13} />
+                <span>Trả về</span>
+              </button>
+            )}
+            {line.isReturned && (
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Đã trả</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export default function RequestDetail() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { isAdmin, hasPermission } = useAuth()
+  const queryClient = useQueryClient()
+
+  const requestId = id ? Number(id) : null
+  const { data, isLoading, error } = useRequest(requestId)
+
+  const [returnTarget, setReturnTarget] = useState<{
+    allocationId: number
+    deviceName: string
+    deviceSku: string
+    recipient: string
+  } | null>(null)
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  const returnMutation = useMutation({
+    mutationFn: (args: ReturnDeviceArgs) => unwrap(api.requests.returnDevice(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] })
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      queryClient.invalidateQueries({ queryKey: ['requests'] })
+      setReturnTarget(null)
+    }
+  })
+
+  const addMutation = useMutation({
+    mutationFn: (args: AddToRequestArgs) => unwrap(api.requests.addDevices(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] })
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      queryClient.invalidateQueries({ queryKey: ['requests'] })
+      queryClient.invalidateQueries({ queryKey: ['requests', 'available-devices'] })
+      setShowAddDialog(false)
+    }
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: (args: UpdateRequestStatusArgs) => unwrap(api.requests.updateStatus(args)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] })
+      queryClient.invalidateQueries({ queryKey: ['requests'] })
+    }
+  })
+
+  if (isLoading) {
+    return <div style={{ padding: 24, color: 'var(--text-muted)', fontSize: 14 }}>Đang tải…</div>
+  }
+  if (error) {
+    return <div style={{ padding: 24, color: '#dc2626', fontSize: 14 }}>{(error as Error).message}</div>
+  }
+  if (!data) return null
+
+  const { bg, fg } = requestEffectiveBadgeStyle(data.status, data.allReturned)
+
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* Back */}
+      <div
+        onClick={() => navigate('/requests')}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          fontSize: 13, fontWeight: 600, color: 'var(--text-muted)',
+          cursor: 'pointer', marginBottom: 16
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+      >
+        <IconBack size={16} />
+        <span>Quay lại danh sách</span>
+      </div>
+
+      {/* Header card */}
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 'var(--rad-lg)', padding: '18px 22px'
+      }}>
+        {/* Top row: code + badge + print/add buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              fontSize: 22, fontWeight: 700, letterSpacing: '-.01em',
+              fontFamily: "'Consolas','SF Mono',monospace", color: 'var(--primary)'
+            }}>
+              {data.code}
+            </div>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center',
+              padding: '3px 10px', borderRadius: 999,
+              fontSize: 12, fontWeight: 600,
+              background: bg, color: fg
+            }}>
+              {requestEffectiveLabel(data.status, data.allReturned)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={() => printRequest(data)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                height: 38, padding: '0 14px',
+                border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                background: 'none', color: 'var(--text)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hoverbg)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <IconPrint size={14} />
+              In phiếu
+            </button>
+
+            {hasPermission('manage_requests') && (
+              <button
+                onClick={() => setShowEditDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 14px',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'none', color: 'var(--text)',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--hoverbg)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+              >
+                <IconEdit size={14} />
+                Sửa
+              </button>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 14px',
+                  border: '1px solid #dc2626', borderRadius: 'var(--rad-sm)',
+                  background: 'none', color: '#dc2626',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+              >
+                <IconTrash size={14} />
+                Xoá
+              </button>
+            )}
+
+            {hasPermission('manage_requests') && data.status === 'allocated' && (
+              <button
+                onClick={() => statusMutation.mutate({ id: data.id, status: 'completed' })}
+                disabled={statusMutation.isPending}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 14px',
+                  border: 'none', borderRadius: 'var(--rad-sm)',
+                  background: '#16a34a', color: '#fff',
+                  fontSize: 13, fontWeight: 600,
+                  cursor: statusMutation.isPending ? 'not-allowed' : 'pointer',
+                  opacity: statusMutation.isPending ? 0.7 : 1,
+                }}
+              >
+                <span style={{ fontSize: 14, lineHeight: 1 }}>✓</span>
+                {statusMutation.isPending ? 'Đang lưu…' : 'Đánh dấu hoàn tất'}
+              </button>
+            )}
+
+            {hasPermission('create_request') && data.status !== 'completed' && (
+              <button
+                onClick={() => setShowAddDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 14px',
+                  border: '2px dashed var(--primary)', borderRadius: 'var(--rad-sm)',
+                  background: 'none', color: 'var(--primary)',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-soft2, rgba(37,99,235,.06))')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                <IconPlus size={14} />
+                Thêm thiết bị
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Meta grid */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
+          gap: '16px 12px', marginTop: 18, paddingTop: 16,
+          borderTop: '1px solid var(--border)'
+        }}>
+          {[
+            { label: 'Phòng ban', value: data.department || '—' },
+            { label: 'Ngày lập', value: data.createdAt },
+            { label: 'Số thiết bị', value: String(data.deviceCount) },
+          ].map(({ label, value }) => (
+            <div key={label}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 4 }}>
+                {label}
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Notes */}
+        {data.notes && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 4 }}>Ghi chú</div>
+            <div style={{ fontSize: 14, color: 'var(--text)' }}>{data.notes}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Device table */}
+      <DeviceTable
+        lines={data.lines}
+        onReturn={line => setReturnTarget({
+          allocationId: line.allocationId,
+          deviceName: line.deviceName,
+          deviceSku: line.deviceSku,
+          recipient: line.recipient,
+        })}
+      />
+
+      {/* Return Dialog */}
+      {returnTarget && (
+        <ReturnDialog
+          allocationId={returnTarget.allocationId}
+          deviceName={returnTarget.deviceName}
+          deviceSku={returnTarget.deviceSku}
+          recipient={returnTarget.recipient}
+          contextLabel={`Phiếu liên kết: ${data.code}`}
+          onClose={() => setReturnTarget(null)}
+          onConfirm={args => returnMutation.mutate(args)}
+          loading={returnMutation.isPending}
+        />
+      )}
+
+      {/* Add Device Dialog */}
+      {showAddDialog && (
+        <AddDeviceDialog
+          requestDetail={data}
+          onClose={() => setShowAddDialog(false)}
+          onConfirm={args => addMutation.mutate(args)}
+          loading={addMutation.isPending}
+        />
+      )}
+
+      {/* Edit Request Dialog */}
+      {showEditDialog && data && (
+        <EditRequestDialog
+          request={data}
+          onClose={() => setShowEditDialog(false)}
+        />
+      )}
+
+      {/* Confirm Delete Dialog */}
+      {showDeleteDialog && data && (
+        <ConfirmDeleteRequestDialog
+          request={data}
+          onClose={() => setShowDeleteDialog(false)}
+        />
+      )}
+
+      {/* Mutation error toasts */}
+      {returnMutation.isError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          background: '#dc2626', color: '#fff', padding: '12px 18px',
+          borderRadius: 'var(--rad-md)', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,.2)'
+        }}>
+          {(returnMutation.error as Error).message}
+        </div>
+      )}
+      {addMutation.isError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          background: '#dc2626', color: '#fff', padding: '12px 18px',
+          borderRadius: 'var(--rad-md)', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,.2)'
+        }}>
+          {(addMutation.error as Error).message}
+        </div>
+      )}
+      {statusMutation.isError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          background: '#dc2626', color: '#fff', padding: '12px 18px',
+          borderRadius: 'var(--rad-md)', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,.2)'
+        }}>
+          {(statusMutation.error as Error).message}
+        </div>
+      )}
+    </div>
+  )
+}
