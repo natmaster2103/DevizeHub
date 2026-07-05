@@ -360,6 +360,91 @@ describe('requests status flow', () => {
     expect(got.ok).toBe(true)
     if (got.ok) expect(got.data.lines[0].recipient).toBe('Cột Recipient')
   })
+
+  it('formats the allocation issuedAt as dd/mm/yyyy HH:mm on each line', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    const localTime = new Date(2026, 2, 5, 15, 15) // 05/03/2026 15:15, device's local wall clock
+    db.insert(allocations).values({
+      requestId: reqId,
+      deviceId: dev.id,
+      issuedAt: localTime.toISOString(),
+      borrowerName: 'Nguyễn Văn A',
+      notes: null,
+    }).run()
+    const got = await h.get({ id: reqId })
+    expect(got.ok).toBe(true)
+    if (got.ok) expect(got.data.lines[0].issuedAt).toBe('05/03/2026 15:15')
+  })
+
+  it('formats issuedAt using the local device clock across a UTC day boundary', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ id: devices.id }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    // 05/03/2026 01:30 local time — in timezones ahead of UTC this instant falls on 04/03 in UTC,
+    // so a formatter using UTC getters would report the wrong day entirely.
+    const localTime = new Date(2026, 2, 5, 1, 30)
+    db.insert(allocations).values({
+      requestId: reqId,
+      deviceId: dev.id,
+      issuedAt: localTime.toISOString(),
+      borrowerName: 'Nguyễn Văn A',
+      notes: null,
+    }).run()
+    const got = await h.get({ id: reqId })
+    expect(got.ok).toBe(true)
+    if (got.ok) expect(got.data.lines[0].issuedAt).toBe('05/03/2026 01:30')
+  })
+
+  it('get: allReturned is false for a pending request with no devices', async () => {
+    const { h, reqId } = await setup()
+    const got = await h.get({ id: reqId })
+    expect(got.ok).toBe(true)
+    if (got.ok) expect(got.data.allReturned).toBe(false)
+  })
+
+  it('get: allReturned is false while a device is still on loan', async () => {
+    const { db, h, reqId } = await setup()
+    const avail = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()
+    await h.addDevices({ requestId: reqId, deviceSkus: [avail[0].sku, avail[1].sku], borrowerName: 'Nguyễn Văn A' })
+    const got = await h.get({ id: reqId })
+    expect(got.ok).toBe(true)
+    if (got.ok) {
+      const allocationId = got.data.lines[0].allocationId
+      await h.returnDevice({ allocationId, condition: 'Tốt', notes: '' })
+      const after = await h.get({ id: reqId })
+      if (after.ok) expect(after.data.allReturned).toBe(false)
+    }
+  })
+
+  it('get: allReturned is true once every device on the request has been returned', async () => {
+    const { db, h, reqId } = await setup()
+    const avail = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()
+    await h.addDevices({ requestId: reqId, deviceSkus: [avail[0].sku, avail[1].sku], borrowerName: 'Nguyễn Văn A' })
+    const got = await h.get({ id: reqId })
+    expect(got.ok).toBe(true)
+    if (got.ok) {
+      for (const line of got.data.lines) {
+        await h.returnDevice({ allocationId: line.allocationId, condition: 'Tốt', notes: '' })
+      }
+      const after = await h.get({ id: reqId })
+      if (after.ok) expect(after.data.allReturned).toBe(true)
+    }
+  })
+
+  it('list: allReturned is true once every device on the request has been returned', async () => {
+    const { db, h, reqId } = await setup()
+    const dev = db.select({ sku: devices.sku }).from(devices).where(eq(devices.status, 'available')).all()[0]
+    await h.addDevices({ requestId: reqId, deviceSkus: [dev.sku], borrowerName: 'Nguyễn Văn A' })
+    const got = await h.get({ id: reqId })
+    if (got.ok) await h.returnDevice({ allocationId: got.data.lines[0].allocationId, condition: 'Tốt', notes: '' })
+
+    const list = await h.list({ query: '' })
+    expect(list.ok).toBe(true)
+    if (list.ok) {
+      const row = list.data.requests.find((r) => r.id === reqId)
+      expect(row?.allReturned).toBe(true)
+    }
+  })
 })
 
 // ── availableDevices: thumbnailPath ──────────────────────────────────────────

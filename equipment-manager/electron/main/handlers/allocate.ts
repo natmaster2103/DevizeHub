@@ -3,6 +3,7 @@ import type { AppDb } from '../db'
 import { devices, categories, deviceGroups, allocations, employees, departments, requests } from '../db/schema'
 import { session } from '../session'
 import { requirePermission } from './settings'
+import { bumpRequestToAllocated } from './requests'
 import type {
   ApiResponse,
   AllocateFormData,
@@ -127,6 +128,8 @@ export function makeAllocateHandlers(db: AppDb) {
         .where(eq(devices.id, device.id))
         .run()
 
+      bumpRequestToAllocated(db, args.requestId)
+
       return { ok: true, data: { ok: true } }
     },
 
@@ -178,6 +181,8 @@ export function makeAllocateHandlers(db: AppDb) {
           .where(eq(devices.id, dev.id))
           .run()
       }
+
+      bumpRequestToAllocated(db, args.requestId)
 
       return { ok: true, data: { ok: true } }
     },

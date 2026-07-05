@@ -24,10 +24,20 @@ import type {
 
 function fmtDate(iso: string): string {
   const d = new Date(iso)
-  const dd = String(d.getUTCDate()).padStart(2, '0')
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const yyyy = d.getUTCFullYear()
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
   return `${dd}/${mm}/${yyyy}`
+}
+
+function fmtDateTime(iso: string): string {
+  const d = new Date(iso)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`
 }
 
 function parseBorrowerFromNotes(notes: string | null): string {
@@ -36,6 +46,15 @@ function parseBorrowerFromNotes(notes: string | null): string {
   return match ? match[1].trim() : ''
 }
 
+/** Moves a request from 'pending' to 'allocated' the first time a device is attached to it. */
+export function bumpRequestToAllocated(db: AppDb, requestId: number | null | undefined) {
+  if (requestId == null) return
+  const cur = db.select({ status: requests.status }).from(requests)
+    .where(eq(requests.id, requestId)).all()[0]
+  if (cur && cur.status === 'pending') {
+    db.update(requests).set({ status: 'allocated' }).where(eq(requests.id, requestId)).run()
+  }
+}
 
 export function makeRequestHandlers(db: AppDb) {
   return {
@@ -54,14 +73,18 @@ export function makeRequestHandlers(db: AppDb) {
         .all()
 
       const allAllocs = db
-        .select({ requestId: allocations.requestId })
+        .select({ requestId: allocations.requestId, returnedAt: allocations.returnedAt })
         .from(allocations)
         .all()
 
       const countByReq = new Map<number, number>()
+      const activeCountByReq = new Map<number, number>()
       for (const a of allAllocs) {
         if (a.requestId == null) continue
         countByReq.set(a.requestId, (countByReq.get(a.requestId) ?? 0) + 1)
+        if (a.returnedAt === null) {
+          activeCountByReq.set(a.requestId, (activeCountByReq.get(a.requestId) ?? 0) + 1)
+        }
       }
 
       const q = (args.query ?? '').toLowerCase().trim()
@@ -73,6 +96,7 @@ export function makeRequestHandlers(db: AppDb) {
         createdAt: fmtDate(r.createdAt),
         deviceCount: countByReq.get(r.id) ?? 0,
         status: r.status as RequestStatus,
+        allReturned: (countByReq.get(r.id) ?? 0) > 0 && (activeCountByReq.get(r.id) ?? 0) === 0,
       }))
 
       if (q) {
@@ -115,6 +139,7 @@ export function makeRequestHandlers(db: AppDb) {
       const lines = db
         .select({
           allocationId: allocations.id,
+          issuedAt: allocations.issuedAt,
           returnedAt: allocations.returnedAt,
           deviceSku: devices.sku,
           deviceName: devices.name,
@@ -136,6 +161,7 @@ export function makeRequestHandlers(db: AppDb) {
         deviceName: l.deviceName ?? '',
         category: l.categoryName ?? '',
         recipient: l.borrowerName ?? l.recipientName ?? parseBorrowerFromNotes(l.allocNotes),
+        issuedAt: fmtDateTime(l.issuedAt),
         isReturned: l.returnedAt !== null,
       }))
 
@@ -151,6 +177,7 @@ export function makeRequestHandlers(db: AppDb) {
           createdAt: fmtDate(req.createdAt),
           deviceCount: total,
           status: req.status as RequestStatus,
+          allReturned: total > 0 && deviceLines.every((l) => l.isReturned),
           notes: req.notes ?? null,
           lines: deviceLines,
         },
@@ -255,11 +282,7 @@ export function makeRequestHandlers(db: AppDb) {
           .run()
       }
 
-      const cur = db.select({ status: requests.status }).from(requests)
-        .where(eq(requests.id, req.id)).all()[0]
-      if (cur && cur.status === 'pending') {
-        db.update(requests).set({ status: 'allocated' }).where(eq(requests.id, req.id)).run()
-      }
+      bumpRequestToAllocated(db, req.id)
 
       return { ok: true, data: { ok: true } }
     },

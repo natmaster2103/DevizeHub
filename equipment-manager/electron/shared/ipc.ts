@@ -308,6 +308,7 @@ export interface RequestRow {
   createdAt: string
   deviceCount: number
   status: RequestStatus
+  allReturned: boolean
 }
 export interface RequestListArgs { query: string }
 export interface RequestListResult { requests: RequestRow[] }
@@ -318,6 +319,7 @@ export interface RequestDeviceLine {
   deviceName: string
   category: string
   recipient: string
+  issuedAt: string
   isReturned: boolean
 }
 export interface RequestDetail {
@@ -328,6 +330,7 @@ export interface RequestDetail {
   createdAt: string
   deviceCount: number
   status: RequestStatus
+  allReturned: boolean
   notes: string | null
   lines: RequestDeviceLine[]
 }

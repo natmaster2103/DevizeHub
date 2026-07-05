@@ -1,21 +1,53 @@
 {
-  "name": "equipment-manager",
-  "version": "0.1.0",
-  "description": "Offline equipment management desktop app (EquipHub)",
+  "name": "QLPT07",
+  "version": "1.0.1",
+  "description": "Offline equipment management desktop app",
   "main": "./out/main/index.js",
-  "author": "",
+  "author": "Natmaster (Tuannguyen)",
   "license": "UNLICENSED",
   "scripts": {
     "predev": "electron-rebuild -f -w better-sqlite3",
     "dev": "env -u ELECTRON_RUN_AS_NODE electron-vite dev",
     "build": "env -u ELECTRON_RUN_AS_NODE electron-vite build",
     "start": "env -u ELECTRON_RUN_AS_NODE electron-vite preview",
+    "build:win": "npm run build && env -u ELECTRON_RUN_AS_NODE electron-builder --win --x64",
     "typecheck:node": "tsc -p tsconfig.node.json --noEmit",
     "typecheck:web": "tsc -p tsconfig.json --noEmit",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate"
+  },
+  "build": {
+    "appId": "com.qlptpa07.equiphub",
+    "productName": "QLPT-PA07",
+    "directories": {
+      "output": "release"
+    },
+    "icon": "src/assets/icon-App.ico",
+    "files": [
+      "out/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "!**/*.{md,map}"
+    ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
@@ -41,6 +73,7 @@
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.28.0",
     "electron": "^33.0.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^2.3.0",
     "jsdom": "^25.0.1",
     "postcss": "^8.4.47",

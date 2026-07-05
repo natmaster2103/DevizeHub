@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRequest, useAvailableDevices } from '@/hooks/useRequest'
 import { useAuth } from '@/context/AuthContext'
-import { REQUEST_STATUS_LABELS, requestBadgeStyle } from '@/lib/status'
+import { requestEffectiveLabel, requestEffectiveBadgeStyle } from '@/lib/status'
 import { IconBack, IconReturn, IconPlus, IconSearch, IconPrint, IconEdit, IconTrash } from '@/lib/icons'
 import { printRequest } from '@/lib/print'
 import { api, unwrap } from '@/lib/api'
@@ -469,7 +469,7 @@ function ConfirmDeleteRequestDialog({ request, onClose }: ConfirmDeleteRequestDi
 }
 
 // ── Device line row ───────────────────────────────────────────────────────────
-const LINE_COL = '130px 1.5fr 1fr 1fr 110px'
+const LINE_COL = '120px 1.3fr 0.9fr 0.9fr 150px 110px'
 
 function DeviceTable({
   lines,
@@ -494,8 +494,9 @@ function DeviceTable({
         <div>SKU</div>
         <div>Tên thiết bị</div>
         <div>Loại</div>
-        <div>Người nhận</div>
-        <div style={{ textAlign: 'right' }}>Thao tác</div>
+        <div>Người mượn</div>
+        <div>Ngày cấp phát</div>
+        <div style={{ textAlign: 'right' }}>Trạng thái</div>
       </div>
 
       {lines.length === 0 && (
@@ -523,6 +524,10 @@ function DeviceTable({
           <div style={{ fontWeight: 600 }}>{line.deviceName}</div>
           <div style={{ color: 'var(--text-muted)' }}>{line.category}</div>
           <div style={{ color: 'var(--text-muted)' }}>{line.recipient || '—'}</div>
+          <div style={{
+            fontFamily: "'Consolas','SF Mono',monospace",
+            fontSize: 12, color: 'var(--text-muted)'
+          }}>{line.issuedAt}</div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             {!line.isReturned && (
               <button
@@ -608,7 +613,7 @@ export default function RequestDetail() {
   }
   if (!data) return null
 
-  const { bg, fg } = requestBadgeStyle(data.status)
+  const { bg, fg } = requestEffectiveBadgeStyle(data.status, data.allReturned)
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -647,7 +652,7 @@ export default function RequestDetail() {
               fontSize: 12, fontWeight: 600,
               background: bg, color: fg
             }}>
-              {REQUEST_STATUS_LABELS[data.status]}
+              {requestEffectiveLabel(data.status, data.allReturned)}
             </span>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -668,38 +673,39 @@ export default function RequestDetail() {
             </button>
 
             {hasPermission('manage_requests') && (
-              <>
-                <button
-                  onClick={() => setShowEditDialog(true)}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                    height: 38, padding: '0 14px',
-                    border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
-                    background: 'none', color: 'var(--text)',
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--hoverbg)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
-                >
-                  <IconEdit size={14} />
-                  Sửa
-                </button>
-                <button
-                  onClick={() => setShowDeleteDialog(true)}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                    height: 38, padding: '0 14px',
-                    border: '1px solid #dc2626', borderRadius: 'var(--rad-sm)',
-                    background: 'none', color: '#dc2626',
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,.06)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
-                >
-                  <IconTrash size={14} />
-                  Xoá
-                </button>
-              </>
+              <button
+                onClick={() => setShowEditDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 14px',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'none', color: 'var(--text)',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--hoverbg)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+              >
+                <IconEdit size={14} />
+                Sửa
+              </button>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 38, padding: '0 14px',
+                  border: '1px solid #dc2626', borderRadius: 'var(--rad-sm)',
+                  background: 'none', color: '#dc2626',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+              >
+                <IconTrash size={14} />
+                Xoá
+              </button>
             )}
 
             {hasPermission('manage_requests') && data.status === 'allocated' && (

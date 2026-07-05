@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRequests } from '@/hooks/useRequests'
 import { useAuth } from '@/context/AuthContext'
-import { REQUEST_STATUS_LABELS, requestBadgeStyle } from '@/lib/status'
+import { requestEffectiveLabel, requestEffectiveBadgeStyle } from '@/lib/status'
 import { IconSearch, IconPlus } from '@/lib/icons'
 import { CreateRequestDialog, useDepartments } from '@/components/CreateRequestDialog'
 import type { RequestRow, RequestStatus } from '@shared/ipc'
 
 // ── Badge ─────────────────────────────────────────────────────────────────────
-function RequestBadge({ status }: { status: RequestRow['status'] }) {
-  const { bg, fg } = requestBadgeStyle(status)
+function RequestBadge({ status, allReturned }: { status: RequestRow['status']; allReturned: boolean }) {
+  const { bg, fg } = requestEffectiveBadgeStyle(status, allReturned)
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center',
@@ -17,7 +17,7 @@ function RequestBadge({ status }: { status: RequestRow['status'] }) {
       fontSize: 12, fontWeight: 600,
       background: bg, color: fg
     }}>
-      {REQUEST_STATUS_LABELS[status]}
+      {requestEffectiveLabel(status, allReturned)}
     </span>
   )
 }
@@ -191,7 +191,7 @@ export default function Requests() {
                 fontSize: 12, color: 'var(--text-muted)'
               }}>{req.createdAt}</div>
               <div style={{ textAlign: 'center', fontWeight: 600 }}>{req.deviceCount}</div>
-              <div><RequestBadge status={req.status} /></div>
+              <div><RequestBadge status={req.status} allReturned={req.allReturned} /></div>
               <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 16 }}>›</div>
             </div>
           ))}

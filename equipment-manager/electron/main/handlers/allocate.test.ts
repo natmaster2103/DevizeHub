@@ -3,10 +3,11 @@ import { isNull, eq, and } from 'drizzle-orm'
 import { createDb } from '../db'
 import { runMigrations } from '../db/migrate'
 import { seedIfEmpty } from '../db/seed'
-import { allocations, devices, employees } from '../db/schema'
+import { allocations, devices, employees, requests, departments } from '../db/schema'
 import { session } from '../session'
 import { ALL_PERMISSIONS } from '@shared/ipc'
 import { makeAllocateHandlers } from './allocate'
+import { makeRequestHandlers } from './requests'
 
 function setup() {
   const { db } = createDb(':memory:')
@@ -50,6 +51,28 @@ describe('allocate.quickAllocate', () => {
     expect(alc!.borrowerName).toBe('Nguyễn Văn Lẻ')
     expect(alc!.notes).toBe('giao gấp')
   })
+
+  it('bumps a pending request to allocated when devices are dropped onto it', async () => {
+    const { db, alloc } = setup()
+    const reqH = makeRequestHandlers(db)
+    const deptId = db.select({ id: departments.id }).from(departments).get()!.id
+    const created = await reqH.create({ code: 'DASH-001', departmentId: deptId, createdAt: null, notes: null })
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+
+    const res = await alloc.quickAllocate({
+      deviceSkus: ['LAP-0024'],
+      departmentId: deptId,
+      borrowerName: 'Nguyễn Văn A',
+      requestId: created.data.id,
+      notes: null,
+    })
+    expect(res.ok).toBe(true)
+
+    const req = db.select({ status: requests.status }).from(requests)
+      .where(eq(requests.id, created.data.id)).get()
+    expect(req!.status).toBe('allocated')
+  })
 })
 
 describe('allocations.borrower_name column', () => {
@@ -86,5 +109,30 @@ describe('allocate.create', () => {
     const alc = db.select().from(allocations).where(eq(allocations.deviceId, dev!.id)).get()
     expect(alc!.borrowerName).toBe(emp!.name)
     expect(alc!.notes).toBeNull()
+  })
+
+  it('bumps a pending request to allocated when linked via single-device allocate', async () => {
+    const { db, alloc } = setup()
+    const reqH = makeRequestHandlers(db)
+    const emp = db.select({ id: employees.id, departmentId: employees.departmentId })
+      .from(employees).get()
+    const created = await reqH.create({ code: 'ALLOC-001', departmentId: emp!.departmentId!, createdAt: null, notes: null })
+    expect(created.ok).toBe(true)
+    if (!created.ok) return
+
+    const res = await alloc.create({
+      deviceSku: 'LAP-0024',
+      employeeId: emp!.id,
+      departmentId: emp!.departmentId!,
+      dueDate: null,
+      requestId: created.data.id,
+      conditionOut: '',
+      notes: '',
+    })
+    expect(res.ok).toBe(true)
+
+    const req = db.select({ status: requests.status }).from(requests)
+      .where(eq(requests.id, created.data.id)).get()
+    expect(req!.status).toBe('allocated')
   })
 })

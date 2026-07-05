@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { STATUS_LABELS, badgeStyle } from './status'
-import { REQUEST_STATUS_LABELS, requestBadgeStyle } from './status'
+import { REQUEST_STATUS_LABELS, requestBadgeStyle, requestEffectiveLabel, requestEffectiveBadgeStyle } from './status'
 
 describe('status map', () => {
   it('maps English enums to Vietnamese labels', () => {
@@ -28,5 +28,23 @@ describe('request status', () => {
   it('maps completed to Hoàn tất with green', () => {
     expect(REQUEST_STATUS_LABELS.completed).toBe('Hoàn tất')
     expect(requestBadgeStyle('completed').fg).toBe('#16a34a')
+  })
+})
+
+describe('request effective status (accounts for full returns)', () => {
+  it('shows Đã trả đủ once an allocated request has every device returned', () => {
+    expect(requestEffectiveLabel('allocated', true)).toBe('Đã trả đủ')
+  })
+  it('keeps Đang cho mượn while a device is still on loan', () => {
+    expect(requestEffectiveLabel('allocated', false)).toBe('Đang cho mượn')
+  })
+  it('ignores allReturned for pending and completed requests', () => {
+    expect(requestEffectiveLabel('pending', true)).toBe('Chưa cấp phát')
+    expect(requestEffectiveLabel('completed', true)).toBe('Hoàn tất')
+  })
+  it('gives Đã trả đủ a distinct color from Đang cho mượn', () => {
+    const fullyReturned = requestEffectiveBadgeStyle('allocated', true)
+    const onLoan = requestEffectiveBadgeStyle('allocated', false)
+    expect(fullyReturned.fg).not.toBe(onLoan.fg)
   })
 })

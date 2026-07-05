@@ -10,6 +10,7 @@ const mockRequest: RequestDetail = {
   createdAt: '22/06/2026',
   deviceCount: 2,
   status: 'allocated',
+  allReturned: false,
   notes: null,
   lines: [
     {
@@ -18,6 +19,7 @@ const mockRequest: RequestDetail = {
       deviceName: 'Laptop Dell XPS',
       category: 'Laptop',
       recipient: 'Nguyễn Văn A',
+      issuedAt: '22/06/2026 09:00',
       isReturned: false,
     },
     {
@@ -26,6 +28,7 @@ const mockRequest: RequestDetail = {
       deviceName: 'Laptop ThinkPad',
       category: 'Laptop',
       recipient: 'Trần Thị B',
+      issuedAt: '22/06/2026 09:05',
       isReturned: true,
     },
   ],

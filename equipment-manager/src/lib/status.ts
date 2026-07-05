@@ -35,3 +35,17 @@ const REQ_COLORS: Record<RequestStatus, { bg: string; fg: string }> = {
   completed: { bg: 'rgba(22,163,74,.14)', fg: '#16a34a' },
 }
 export function requestBadgeStyle(status: RequestStatus) { return REQ_COLORS[status] }
+
+const FULLY_RETURNED_LABEL = 'Đã trả đủ'
+const FULLY_RETURNED_COLOR = { bg: 'rgba(202,138,4,.18)', fg: '#ca8a04' }
+
+/** An allocated request whose devices have all come back is ready to complete — surface that distinctly from "still on loan". */
+export function requestEffectiveLabel(status: RequestStatus, allReturned: boolean): string {
+  if (status === 'allocated' && allReturned) return FULLY_RETURNED_LABEL
+  return REQUEST_STATUS_LABELS[status]
+}
+
+export function requestEffectiveBadgeStyle(status: RequestStatus, allReturned: boolean) {
+  if (status === 'allocated' && allReturned) return FULLY_RETURNED_COLOR
+  return REQ_COLORS[status]
+}

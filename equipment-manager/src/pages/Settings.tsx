@@ -634,11 +634,8 @@ function ResetDataSection() {
 
 // ── Batch import section ──────────────────────────────────────────────────────
 function ImportSection() {
-  const { hasPermission } = useAuth()
   const qc = useQueryClient()
   const [showDialog, setShowDialog] = useState(false)
-
-  if (!hasPermission('edit_device')) return null
 
   function handleImported() {
     qc.invalidateQueries({ queryKey: ['devices'] })
@@ -701,14 +698,18 @@ export default function Settings() {
         <ChangePasswordSection />
       </SectionCard>
 
-      <SectionCard title="Cơ sở dữ liệu">
-        <DbInfoSection />
-        {isAdmin && <ResetDataSection />}
-      </SectionCard>
+      {isAdmin && (
+        <SectionCard title="Cơ sở dữ liệu">
+          <DbInfoSection />
+          <ResetDataSection />
+        </SectionCard>
+      )}
 
-      <SectionCard title="Nhập dữ liệu">
-        <ImportSection />
-      </SectionCard>
+      {isAdmin && (
+        <SectionCard title="Nhập dữ liệu">
+          <ImportSection />
+        </SectionCard>
+      )}
     </div>
   )
 }
